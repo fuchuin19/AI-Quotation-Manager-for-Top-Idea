@@ -1,0 +1,25 @@
+@import "tailwindcss";
+@import "./theme.css";
+
+@theme inline {
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-on-background);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Tabular figures for prices and SKU codes so columns of numbers align —
+   required by DESIGN.md's typography rules. */
+.tnum {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Inputs must never render below 16px or Safari zooms the viewport on focus. */
+input,
+select,
+textarea {
+  font-size: 16px;
+}

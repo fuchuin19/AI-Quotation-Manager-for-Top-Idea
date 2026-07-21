@@ -1,0 +1,38 @@
+{
+  "name": "quotation-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "import:catalog": "node scripts/import-catalog.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1090.0",
+    "@aws-sdk/s3-request-presigner": "^3.1091.0",
+    "@google/genai": "^2.12.0",
+    "bcryptjs": "^3.0.3",
+    "exceljs": "^4.4.0",
+    "fflate": "^0.8.3",
+    "lucide-react": "^1.25.0",
+    "next": "15.5.20",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "sharp": "^0.35.3",
+    "unzipper": "^0.12.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.20",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,196 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">try{
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#68dba9",
+                        "secondary": "#645d58",
+                        "on-primary-fixed": "#131b2e",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#131b2e",
+                        "secondary-container": "#eae1da",
+                        "on-tertiary-container": "#069669",
+                        "inverse-surface": "#2f3130",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "inverse-primary": "#bec6e0",
+                        "tertiary": "#000000",
+                        "tertiary-fixed": "#85f8c4",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#1a1c1c",
+                        "on-primary-container": "#7c839b",
+                        "on-error": "#ffffff",
+                        "outline-variant": "#c6c6cd",
+                        "surface-container": "#eeeeed",
+                        "on-background": "#1a1c1c",
+                        "background": "#f9f9f8",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed": "#002114",
+                        "on-secondary-fixed": "#1f1b17",
+                        "surface-container-high": "#e8e8e7",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed": "#eae1da",
+                        "surface-bright": "#f9f9f8",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#dae2fd",
+                        "on-tertiary-fixed-variant": "#005137",
+                        "surface-variant": "#e2e2e2",
+                        "surface": "#f9f9f8",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-surface-variant": "#45464d",
+                        "tertiary-container": "#002114",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#4b4641",
+                        "inverse-on-surface": "#f1f1f0",
+                        "surface-tint": "#565e74",
+                        "outline": "#76777d",
+                        "primary-fixed-dim": "#bec6e0",
+                        "primary": "#000000",
+                        "surface-dim": "#dadad9",
+                        "surface-container-low": "#f3f4f3",
+                        "on-secondary-container": "#6a635e",
+                        "secondary-fixed-dim": "#cec5bf"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "margin-mobile": "20px",
+                        "margin-desktop": "80px",
+                        "gutter": "16px",
+                        "touch-target": "44px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "price-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "price-display": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-sm": ["20px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "body-lg": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "price-sm": ["14px", { "lineHeight": "1", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "price-display": ["18px", { "lineHeight": "1", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    }catch(_e){}</script><meta charset="utf-8"></head><body class="bg-background text-on-background w-[390px] mx-auto min-h-screen relative overflow-x-hidden flex flex-col font-body-md text-body-md pb-[80px]">
+<!-- TopAppBar -->
+<header class="bg-surface w-full top-0 sticky border-b border-outline-variant flex justify-between items-center px-margin-mobile py-4 z-40 transition-colors duration-200 hover:bg-surface-container-high">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary" data-icon="menu">menu</span>
+<h1 class="font-headline-md text-headline-md font-semibold text-primary">Quotation Manager</h1>
+</div>
+<div>
+<span class="font-price-display text-price-display text-primary">RM4,520.00</span>
+</div>
+</header>
+<main class="flex-grow flex flex-col px-margin-mobile pt-6 gap-6">
+<!-- Location Breadcrumb -->
+<button class="w-full flex items-center justify-between py-3 border-b border-outline-variant hover:bg-surface-container-low transition-colors text-left group">
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined text-[18px]">place</span>
+<span class="font-body-md text-body-md group-hover:text-primary transition-colors">Master Bath &gt; Water Closet Area</span>
+</div>
+<span class="material-symbols-outlined text-outline">chevron_right</span>
+</button>
+<!-- Input Fields -->
+<div class="flex gap-4">
+<div class="flex-1 flex flex-col gap-1">
+<label class="font-label-caps text-label-caps text-secondary uppercase">Quantity</label>
+<div class="relative flex items-center bg-surface-container-lowest border border-outline-variant rounded focus-within:border-primary focus-within:border-[1.5px] h-touch-target">
+<button class="px-3 text-secondary hover:text-primary"><span class="material-symbols-outlined text-[18px]">remove</span></button>
+<input type="number" value="1" class="w-full bg-transparent text-center font-body-lg text-body-lg text-primary border-none focus:ring-0 p-0">
+<button class="px-3 text-secondary hover:text-primary"><span class="material-symbols-outlined text-[18px]">add</span></button>
+</div>
+</div>
+<div class="flex-1 flex flex-col gap-1">
+<label class="font-label-caps text-label-caps text-secondary uppercase">Discount %</label>
+<input type="number" placeholder="0.00" class="bg-surface-container-lowest border border-outline-variant rounded focus:border-primary focus:border-[1.5px] focus:ring-0 h-touch-target px-3 font-body-lg text-body-lg text-primary text-right tabular-nums">
+</div>
+</div>
+<!-- Scan Button Area (Thumb Zone) -->
+<div class="flex flex-col items-center justify-center py-8 gap-4 mt-auto">
+<button class="w-full bg-primary text-on-primary rounded h-[120px] flex flex-col items-center justify-center gap-2 hover:bg-on-primary-fixed-variant transition-colors group">
+<span class="material-symbols-outlined text-[40px] group-hover:scale-110 transition-transform">qr_code_scanner</span>
+<span class="font-headline-sm text-headline-sm">Scan price tag</span>
+</button>
+<button class="text-secondary hover:text-primary font-body-md text-body-md underline underline-offset-4 decoration-outline-variant">
+                Enter code / search
+            </button>
+</div>
+<!-- Location Summary Panel -->
+<div class="bg-surface-container-low rounded-lg p-4 border border-outline-variant flex justify-between items-center">
+<div>
+<p class="font-label-caps text-label-caps text-secondary uppercase mb-1">Current Location</p>
+<p class="font-headline-sm text-headline-sm text-primary">4 Items</p>
+</div>
+<div class="text-right">
+<p class="font-label-caps text-label-caps text-secondary uppercase mb-1">Subtotal</p>
+<p class="font-price-display text-price-display text-primary">RM1,250.00</p>
+</div>
+</div>
+<!-- Just Added List -->
+<div class="flex flex-col gap-3 pb-6">
+<h2 class="font-label-caps text-label-caps text-secondary uppercase">Just Added</h2>
+<div class="bg-surface-container-lowest border border-outline-variant rounded p-3 flex gap-3 items-center">
+<div class="w-12 h-12 bg-surface-variant rounded flex items-center justify-center flex-shrink-0" data-alt="A sleek, modern wall-mounted toilet in a minimalist showroom setting. High-end sanitaryware photography, clean white background, surgical lighting, sharp focus. Professional architectural product style." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCrgQ7FOSE-2dXYIMuex281ztSdSrLRzpHWoP4HQfXVNO9wsrIQneQSzKVayDrzyjAcktCdt2Hk-M99A0hEbu-RFrOqP4s1V1bCypapARzTlJO95o94zx4pfmvTPYqakQn1xVriomKWn2iInP0KR5cj6zkBGmHVdV4RwPKJze6T1I9-3oO2-AZIvrPGW8bv2YURbrBOpV_wc_FoKKHX5oANADCQm9gPOCWV-PCjPNqHV6-ZwEbfoS2vdAMK_DUM3ABWdFQ5Tp0M2ub2')"></div>
+<div class="flex-grow">
+<p class="font-body-md text-body-md text-primary font-medium truncate">SensoWash® Starck f Plus</p>
+<p class="font-label-caps text-label-caps text-secondary">Qty: 1 • -10%</p>
+</div>
+<span class="font-price-sm text-price-sm text-primary tabular-nums">RM850.00</span>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded p-3 flex gap-3 items-center">
+<div class="w-12 h-12 bg-surface-variant rounded flex items-center justify-center flex-shrink-0" data-alt="A premium brushed nickel flush plate mounted on a matte white wall. Luxury bathroom fittings, minimalist design, stark and clean presentation. Studio lighting highlighting the metallic texture." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCuTqcJZj_Zxe9PvuUgpYEwvySBK5Szu1tvfTP0dPEe4RxermKxpZ2OSpJ2fzx-H0GMeauLqHuA8RO9EZi4GmUUBC4iD0BLRJoTAwLkBvrkj_kR5cBoVkGeC7_EzQy7GwEsGGzJOUWLzkjMTWrHeXGxg3rx2XEQgbbCs6xk46Y1ph9Of9Qcy7urfM26-5h7bT1qql7bfQ6f9K4tqj4AKCH_iiTywxZ830WHFOeO3iTbymzMMNcs7UkKwQ0JlrOlKPxELxKfFxhW9-74')"></div>
+<div class="flex-grow">
+<p class="font-body-md text-body-md text-primary font-medium truncate">A1 Flush Plate, Brushed</p>
+<p class="font-label-caps text-label-caps text-secondary">Qty: 1</p>
+</div>
+<span class="font-price-sm text-price-sm text-primary tabular-nums">RM120.00</span>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded p-3 flex gap-3 items-center">
+<div class="w-12 h-12 bg-surface-variant rounded flex items-center justify-center flex-shrink-0" data-alt="Concealed cistern installation frame isolated on white. Industrial, technical product photography. Clean, clinical, and precise. High-end plumbing components for luxury bathrooms." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBYWaHxvpYtffitS8YY5trPUpWsj04IkAraCEVSO32eI-uTKLzr8o1TehPyfBLYDNzT5fNFIWAGxynRyFw1pMYHi3zLi0I2_yKyOEWJUPfRWSDiEo7yf6IyGGpswdHI5yIh-4bfGjscIqsXxaW6R3-hQ6kQXZWj1H-zoXGplTtZnl_CkiLFut-PbS5ziICbhjONzOehm3lQ4eBfCMFSAE39G1G9-vuWdWyZtUuTHNAGArqA4ePenP1EqAr10T-pfKyKFxU2L7ZVIA5Y')"></div>
+<div class="flex-grow">
+<p class="font-body-md text-body-md text-primary font-medium truncate">DuraSystem® In-wall Carrier</p>
+<p class="font-label-caps text-label-caps text-secondary">Qty: 1</p>
+</div>
+<span class="font-price-sm text-price-sm text-primary tabular-nums">RM280.00</span>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface fixed bottom-0 w-full z-50 border-t border-outline-variant h-touch-target flex justify-around items-center">
+<!-- Active Tab: Capture -->
+<a class="flex flex-col items-center justify-center text-primary border-t-2 border-primary pt-2 w-1/3 scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">qr_code_scanner</span>
+<span class="font-label-caps text-label-caps">Capture</span>
+</a>
+<!-- Inactive Tab: Items -->
+<a class="flex flex-col items-center justify-center text-secondary pt-2 w-1/3 hover:text-primary scale-95 transition-transform duration-150 relative" href="#">
+<span class="material-symbols-outlined mb-1">list_alt</span>
+<span class="font-label-caps text-label-caps">Items</span>
+<span class="absolute top-1 right-[30%] w-4 h-4 bg-primary text-on-primary rounded-full font-label-caps text-[10px] flex items-center justify-center">12</span>
+</a>
+<!-- Inactive Tab: Setup -->
+<a class="flex flex-col items-center justify-center text-secondary pt-2 w-1/3 hover:text-primary scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined mb-1">settings</span>
+<span class="font-label-caps text-label-caps">Setup</span>
+</a>
+</nav>
+
+</body></html>

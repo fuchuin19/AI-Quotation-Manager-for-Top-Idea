@@ -1,0 +1,334 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">try{
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#68dba9",
+                        "secondary": "#645d58",
+                        "on-primary-fixed": "#131b2e",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#131b2e",
+                        "secondary-container": "#eae1da",
+                        "on-tertiary-container": "#069669",
+                        "inverse-surface": "#2f3130",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "inverse-primary": "#bec6e0",
+                        "tertiary": "#000000",
+                        "tertiary-fixed": "#85f8c4",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#1a1c1c",
+                        "on-primary-container": "#7c839b",
+                        "on-error": "#ffffff",
+                        "outline-variant": "#c6c6cd",
+                        "surface-container": "#eeeeed",
+                        "on-background": "#1a1c1c",
+                        "background": "#f9f9f8",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed": "#002114",
+                        "on-secondary-fixed": "#1f1b17",
+                        "surface-container-high": "#e8e8e7",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed": "#eae1da",
+                        "surface-bright": "#f9f9f8",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#dae2fd",
+                        "on-tertiary-fixed-variant": "#005137",
+                        "surface-variant": "#e2e2e2",
+                        "surface": "#f9f9f8",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-surface-variant": "#45464d",
+                        "tertiary-container": "#002114",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#4b4641",
+                        "inverse-on-surface": "#f1f1f0",
+                        "surface-tint": "#565e74",
+                        "outline": "#76777d",
+                        "primary-fixed-dim": "#bec6e0",
+                        "primary": "#000000",
+                        "surface-dim": "#dadad9",
+                        "surface-container-low": "#f3f4f3",
+                        "on-secondary-container": "#6a635e",
+                        "secondary-fixed-dim": "#cec5bf"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "margin-mobile": "20px",
+                        "margin-desktop": "80px",
+                        "gutter": "16px",
+                        "touch-target": "44px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "price-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "price-display": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-sm": ["20px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "body-lg": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "price-sm": ["14px", { "lineHeight": "1", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "price-display": ["18px", { "lineHeight": "1", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    }catch(_e){}</script></head><body class="bg-background text-on-background min-h-screen flex flex-col font-body-md antialiased selection:bg-primary selection:text-on-primary">
+
+    <!-- TopAppBar (Web) -->
+    <header class="w-full top-0 sticky bg-surface border-b border-outline-variant z-50 transition-colors duration-200">
+        <div class="flex justify-between items-center px-margin-mobile md:px-margin-desktop py-4 max-w-[1280px] mx-auto w-full">
+            <div class="flex items-center gap-4">
+                <button class="md:hidden flex items-center justify-center w-touch-target h-touch-target text-primary hover:bg-surface-container-high rounded-full transition-colors">
+                    <span class="material-symbols-outlined" data-icon="menu">menu</span>
+                </button>
+                <h1 class="font-headline-md text-headline-md font-semibold text-primary">Quotation Manager</h1>
+            </div>
+            
+            <!-- Desktop Nav -->
+            <nav class="hidden md:flex items-center gap-[32px]">
+                <a href="#" class="font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors">QUOTATIONS</a>
+                <a href="#" class="font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors">CLIENTS</a>
+                <a href="#" class="font-label-caps text-label-caps text-primary border-b-2 border-primary pb-1">CATALOGUE</a>
+            </nav>
+
+            <div class="flex items-center">
+                <span class="font-price-display text-price-display text-primary">RM0.00</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow w-full max-w-[1280px] mx-auto px-margin-mobile md:px-margin-desktop py-12 flex flex-col items-center">
+        
+        <div class="w-full max-w-[1120px]">
+            <!-- Header Section -->
+            <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                <div>
+                    <h2 class="font-display-lg text-display-lg text-primary mb-2">Catalogue Update</h2>
+                    <p class="font-body-lg text-body-lg text-on-surface-variant">Upload your latest Excel inventory file to synchronize products and pricing.</p>
+                </div>
+                <button class="h-touch-target px-6 flex items-center justify-center bg-transparent border border-[#E7E5E4] rounded text-primary hover:bg-surface-container-lowest transition-colors font-label-caps text-label-caps">
+                    <span class="material-symbols-outlined mr-2 text-[18px]" data-icon="download">download</span>
+                    TEMPLATE
+                </button>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Left Column: Upload Zone -->
+                <div class="lg:col-span-2 flex flex-col gap-6">
+                    
+                    <!-- Drag & Drop Zone -->
+                    <div id="dropZone" class="w-full border-2 border-dashed border-[#E7E5E4] rounded-lg bg-surface-container-lowest hover:bg-surface-container-low transition-colors duration-200 flex flex-col items-center justify-center p-16 cursor-pointer group">
+                        <input type="file" id="fileInput" class="hidden" accept=".xlsx, .xls, .csv">
+                        <div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-200">
+                            <span class="material-symbols-outlined text-[32px] text-primary" data-icon="upload_file">upload_file</span>
+                        </div>
+                        <h3 class="font-headline-sm text-headline-sm text-primary mb-2 text-center">Drag and drop file here</h3>
+                        <p class="font-body-md text-body-md text-on-surface-variant text-center mb-6">or click to browse from your computer</p>
+                        <p class="font-label-caps text-label-caps text-outline text-center">SUPPORTED FORMATS: .XLSX, .CSV (MAX 50MB)</p>
+                    </div>
+
+                    <!-- Uploading State (Initially Hidden) -->
+                    <div id="uploadState" class="hidden w-full border border-[#E7E5E4] rounded-lg bg-surface-container-lowest p-6 flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="flex items-center gap-4">
+                                <span class="material-symbols-outlined text-primary" data-icon="description">description</span>
+                                <div>
+                                    <p class="font-body-lg text-body-lg text-primary" id="fileNameDisplay">q3_inventory_master.xlsx</p>
+                                    <p class="font-body-md text-body-md text-on-surface-variant">2.4 MB</p>
+                                </div>
+                            </div>
+                            <button id="cancelUpload" class="text-on-surface-variant hover:text-error transition-colors">
+                                <span class="material-symbols-outlined" data-icon="close">close</span>
+                            </button>
+                        </div>
+                        <div class="w-full bg-surface-container-high h-1 rounded-full overflow-hidden mb-2">
+                            <div id="progressBar" class="bg-primary h-full w-0 transition-all duration-300 ease-out"></div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <p class="font-label-caps text-label-caps text-on-surface-variant" id="uploadStatusText">UPLOADING &amp; VALIDATING...</p>
+                            <p class="font-label-caps text-label-caps text-primary" id="uploadPercentage">0%</p>
+                        </div>
+                    </div>
+
+                    <!-- Success State (Initially Hidden) -->
+                    <div id="successState" class="hidden w-full border border-[#E7E5E4] rounded-lg bg-surface-container-lowest p-8 flex flex-col items-center justify-center text-center">
+                        <div class="w-16 h-16 rounded-full bg-tertiary-fixed-dim/20 flex items-center justify-center mb-6">
+                            <span class="material-symbols-outlined text-[32px] text-tertiary-container" data-icon="check_circle">check_circle</span>
+                        </div>
+                        <h3 class="font-headline-md text-headline-md text-primary mb-2">Update Successful</h3>
+                        <p class="font-body-md text-body-md text-on-surface-variant mb-8">The catalogue has been synchronized across all devices.</p>
+                        <button onclick="resetUpload()" class="h-touch-target px-8 flex items-center justify-center bg-primary text-on-primary rounded font-label-caps text-label-caps hover:bg-[#1a1c1c] transition-colors w-full md:w-auto">
+                            UPDATE ANOTHER FILE
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Right Column: Summary Panel -->
+                <div class="w-full">
+                    <div class="border border-[#E7E5E4] rounded-lg bg-surface-container-lowest p-6 sticky top-24">
+                        <h3 class="font-label-caps text-label-caps text-primary border-b border-[#E7E5E4] pb-4 mb-4">LAST UPDATE SUMMARY</h3>
+                        
+                        <div class="flex flex-col gap-6">
+                            <!-- Metric 1 -->
+                            <div>
+                                <p class="font-label-caps text-label-caps text-on-surface-variant mb-1">TOTAL PRODUCTS</p>
+                                <p class="font-display-lg text-display-lg text-primary">1,248</p>
+                            </div>
+                            
+                            <div class="h-px w-full bg-[#E7E5E4]"></div>
+
+                            <!-- Detailed Metrics -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="font-label-caps text-label-caps text-on-surface-variant mb-1">NEW ADDED</p>
+                                    <div class="flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-[16px] text-tertiary-container" data-icon="add">add</span>
+                                        <p class="font-headline-sm text-headline-sm text-primary">24</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="font-label-caps text-label-caps text-on-surface-variant mb-1">PRICE CHANGES</p>
+                                    <div class="flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-[16px] text-[#0f172a]" data-icon="currency_exchange">currency_exchange</span>
+                                        <p class="font-headline-sm text-headline-sm text-primary">86</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="font-label-caps text-label-caps text-on-surface-variant mb-1">DEACTIVATED</p>
+                                    <div class="flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-[16px] text-error" data-icon="remove">remove</span>
+                                        <p class="font-headline-sm text-headline-sm text-primary">12</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="h-px w-full bg-[#E7E5E4]"></div>
+
+                            <div class="flex items-center justify-between">
+                                <p class="font-body-md text-body-md text-on-surface-variant">Last sync:</p>
+                                <p class="font-body-md text-body-md text-primary font-medium">Today, 09:41 AM</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- BottomNavBar (Mobile) -->
+    <nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center bg-surface border-t border-outline-variant h-touch-target z-50">
+        <a href="#" class="flex flex-col items-center justify-center text-secondary pt-2 w-full h-full hover:text-primary transition-colors">
+            <span class="material-symbols-outlined mb-1 text-[20px]" data-icon="list_alt">list_alt</span>
+            <span class="font-label-caps text-[10px]">ITEMS</span>
+        </a>
+        <a href="#" class="flex flex-col items-center justify-center text-primary border-t-2 border-primary pt-2 w-full h-full">
+            <span class="material-symbols-outlined mb-1 text-[20px]" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+            <span class="font-label-caps text-[10px]">SETUP</span>
+        </a>
+    </nav>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadState = document.getElementById('uploadState');
+        const successState = document.getElementById('successState');
+        const progressBar = document.getElementById('progressBar');
+        const uploadPercentage = document.getElementById('uploadPercentage');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const cancelUpload = document.getElementById('cancelUpload');
+        const uploadStatusText = document.getElementById('uploadStatusText');
+
+        // Drag & Drop Handlers
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-active'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-active'), false);
+        });
+
+        dropZone.addEventListener('drop', handleDrop, false);
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) handleFile(this.files[0]);
+        });
+        cancelUpload.addEventListener('click', resetUpload);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const file = dt.files[0];
+            if(file) handleFile(file);
+        }
+
+        let uploadInterval;
+
+        function handleFile(file) {
+            // Basic validation visualization
+            fileNameDisplay.textContent = file.name;
+            dropZone.classList.add('hidden');
+            uploadState.classList.remove('hidden');
+            
+            // Simulate Upload Process
+            let progress = 0;
+            progressBar.style.width = '0%';
+            uploadPercentage.textContent = '0%';
+            uploadStatusText.textContent = 'UPLOADING...';
+            
+            clearInterval(uploadInterval);
+            
+            uploadInterval = setInterval(() => {
+                progress += Math.random() * 10;
+                if (progress > 50 && progress < 80) {
+                    uploadStatusText.textContent = 'VALIDATING DATA...';
+                }
+                
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(uploadInterval);
+                    setTimeout(showSuccess, 500);
+                }
+                
+                progressBar.style.width = `${progress}%`;
+                uploadPercentage.textContent = `${Math.floor(progress)}%`;
+                
+            }, 300);
+        }
+
+        function showSuccess() {
+            uploadState.classList.add('hidden');
+            successState.classList.remove('hidden');
+        }
+
+        function resetUpload() {
+            clearInterval(uploadInterval);
+            fileInput.value = '';
+            successState.classList.</script></body></html>

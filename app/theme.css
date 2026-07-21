@@ -1,0 +1,110 @@
+/* =============================================================================
+   DESIGN TOKENS — "Lustre Editorial"
+
+   Single source of truth for the app's visual language. Extracted from
+   frontend_design_reference/lustre_editorial/DESIGN.md and cross-checked
+   against every screen's generated Tailwind config in that folder (all 7
+   agree on these exact values). Change a look-and-feel value here, not in
+   individual components.
+============================================================================= */
+@theme {
+  /* ---------- colors ---------- */
+  --color-surface: #f9f9f8;
+  --color-surface-dim: #dadad9;
+  --color-surface-bright: #f9f9f8;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3f4f3;
+  --color-surface-container: #eeeeed;
+  --color-surface-container-high: #e8e8e7;
+  --color-surface-container-highest: #e2e2e2;
+  --color-surface-variant: #e2e2e2;
+
+  --color-on-surface: #1a1c1c;
+  --color-on-surface-variant: #45464d;
+  --color-inverse-surface: #2f3130;
+  --color-inverse-on-surface: #f1f1f0;
+
+  --color-outline: #76777d;
+  --color-outline-variant: #c6c6cd;
+
+  /* "primary" is the near-black ink used for text, icons, and every primary
+     action (buttons, active nav state) — matches every reference screen. */
+  --color-primary: #000000;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #131b2e;
+  --color-on-primary-container: #7c839b;
+  --color-primary-fixed: #dae2fd;
+  --color-primary-fixed-dim: #bec6e0;
+  --color-on-primary-fixed: #131b2e;
+  --color-on-primary-fixed-variant: #3f465c;
+
+  --color-secondary: #645d58;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #eae1da;
+  --color-on-secondary-container: #6a635e;
+  --color-secondary-fixed: #eae1da;
+  --color-secondary-fixed-dim: #cec5bf;
+  --color-on-secondary-fixed: #1f1b17;
+  --color-on-secondary-fixed-variant: #4b4641;
+
+  /* tertiary / "tertiary-fixed" doubles as the muted-emerald success accent
+     (discount badges, "found in library" state). */
+  --color-tertiary: #000000;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #002114;
+  --color-on-tertiary-container: #069669;
+  --color-tertiary-fixed: #85f8c4;
+  --color-tertiary-fixed-dim: #68dba9;
+  --color-on-tertiary-fixed: #002114;
+  --color-on-tertiary-fixed-variant: #005137;
+
+  /* used for blocking states: price missing, delete, could-not-read-tag */
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --color-background: #f9f9f8;
+  --color-on-background: #1a1c1c;
+
+  /* ---------- radius ---------- */
+  /* "Precision Softened": 8px (bare `rounded`) standard for cards/inputs/
+     buttons, 4px (`rounded-sm`) for small instrument-like controls, 16px
+     (`rounded-lg`) for bottom sheets. */
+  --radius-sm: 0.25rem;
+  --radius: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  /* ---------- layout ---------- */
+  --spacing-touch: 44px;
+  --spacing-margin-mobile: 20px;
+  --spacing-margin-desktop: 80px;
+  --spacing-gutter: 16px;
+
+  /* ---------- typography ---------- */
+  /* Inter is loaded via next/font in app/layout.tsx and bound to --font-sans
+     there; font-weight/tracking are applied per-use via normal Tailwind
+     utilities (font-semibold, tracking-wide, ...) rather than baked in here,
+     so weight/spacing stay easy to override per component. */
+  --text-display-lg: 32px;
+  --text-display-lg--line-height: 1.2;
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 1.3;
+  --text-headline-sm: 20px;
+  --text-headline-sm--line-height: 1.4;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 1.6;
+  --text-body-md: 14px;
+  --text-body-md--line-height: 1.5;
+  --text-label-caps: 12px;
+  --text-label-caps--line-height: 1;
+  --text-price-display: 18px;
+  --text-price-display--line-height: 1;
+  --text-price-sm: 14px;
+  --text-price-sm--line-height: 1;
+
+  /* only diffused-shadow exception permitted by the design: mobile sheets */
+  --shadow-sheet: 0px -10px 30px rgba(0, 0, 0, 0.04);
+}
