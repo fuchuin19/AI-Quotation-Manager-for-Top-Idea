@@ -23,7 +23,7 @@ loadEnv();
 
 const { parseWorkbook, normalizeSku } = require('../lib/catalog-import/xlsx-parse');
 const { dedupe } = require('../lib/catalog-import/dedupe');
-const { collectNeededImagePairs, cropKey, hasAnyCrop } = require('../lib/catalog-import/diff');
+const { collectNeededImagePairs, cropKey, hasAnyCrop, missingDescImageSizes } = require('../lib/catalog-import/diff');
 const { processImage } = require('./lib/images');
 const { openXlsx } = require('./lib/zip');
 const r2 = require('./lib/r2');
@@ -169,7 +169,8 @@ async function runFullOrIncremental(ctx) {
       (existing.images || []).length === m.imageMediaPaths.length &&
       (existing.dimensions || []).length === m.dimensionMediaPaths.length &&
       (existing.descImages || []).length === (m.descImageMediaPaths || []).length &&
-      !hasAnyCrop(m);
+      !hasAnyCrop(m) &&
+      !missingDescImageSizes(existing, m);
 
     if (unchanged) {
       finalProducts.push(existing);
