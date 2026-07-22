@@ -375,6 +375,8 @@ export function QuoteApp() {
             netPriceOverride: null,
             images: p.images,
             dimensions: p.dimensions,
+            descImages: p.descImages ?? [],
+            descImageSizes: p.descImageSizes ?? [],
             // Catalogue has no price at all but a price WAS read off the tag:
             // prefill the manual-entry box with it (same pattern as "use tag
             // details" below) instead of leaving it blank — he still reviews
@@ -458,6 +460,8 @@ export function QuoteApp() {
       netPriceOverride: pending.netPriceOverride,
       images: pending.images,
       dimensions: pending.dimensions,
+      descImages: pending.descImages,
+      descImageSizes: pending.descImageSizes,
       // Marks the item as tag-priced whenever the ACTIVE price came from the
       // tag — either because the whole SKU isn't catalogued (pending.fromTag,
       // unchanged meaning) or because it is catalogued but he picked the tag
@@ -516,6 +520,8 @@ export function QuoteApp() {
         netPriceOverride: null,
         images: p.images,
         dimensions: p.dimensions,
+        descImages: p.descImages ?? [],
+        descImageSizes: p.descImageSizes ?? [],
         enteredPrice: "",
       });
       setNotFound(null);

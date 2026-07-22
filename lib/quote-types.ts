@@ -37,6 +37,12 @@ export interface Quotation extends QuotationMeta {
  * blank/manual lines aren't in the catalogue at all, so they carry a `full`
  * companion with everything a catalogue lookup would otherwise have supplied.
  */
+/** Parallel to a descImages array (same index = same image): the pixel size
+ *  that image was drawn at in the source spreadsheet, so the export can
+ *  reproduce it at its original size instead of stretching it. null when
+ *  the original size couldn't be determined for that particular image. */
+export type DescImageSize = { width: number; height: number } | null;
+
 export interface StoredItem {
   id: string;
   sku: string;
@@ -50,6 +56,8 @@ export interface StoredItem {
     price: number | null;
     images: string[];
     dimensions: string[];
+    descImages?: string[];
+    descImageSizes?: DescImageSize[];
     fromTag?: boolean;
   };
 }
@@ -69,6 +77,10 @@ export interface QuoteItem {
   sub: string;
   images: string[];
   dimensions: string[];
+  /** Images anchored over ITEM DESCRIPTIONS in the source spreadsheet —
+   *  rendered inside the description cell on export, not the IMAGE column. */
+  descImages?: string[];
+  descImageSizes?: DescImageSize[];
   /** True when the price came from reading the showroom tag directly rather
    *  than the catalogue — the SKU isn't in the price list yet. */
   fromTag?: boolean;
@@ -88,6 +100,8 @@ export interface PendingItem {
   netPriceOverride: number | null;
   images: string[];
   dimensions: string[];
+  descImages?: string[];
+  descImageSizes?: DescImageSize[];
   /** Raw text of the price the user types in when priceMissing is true. */
   enteredPrice: string;
   /** True when this draft was built from "Use details from the tag" rather
@@ -346,7 +360,15 @@ export function toStoredItem(it: QuoteItem): StoredItem {
   if (it.fromTag || !it.sku) {
     return {
       ...base,
-      full: { desc: it.desc, price: it.price, images: it.images, dimensions: it.dimensions, fromTag: it.fromTag },
+      full: {
+        desc: it.desc,
+        price: it.price,
+        images: it.images,
+        dimensions: it.dimensions,
+        descImages: it.descImages,
+        descImageSizes: it.descImageSizes,
+        fromTag: it.fromTag,
+      },
     };
   }
   return base;
@@ -374,6 +396,8 @@ export function fromStoredItem(stored: StoredItem, catalog: Product[]): QuoteIte
       sub: stored.sub,
       images: stored.full.images,
       dimensions: stored.full.dimensions,
+      descImages: stored.full.descImages,
+      descImageSizes: stored.full.descImageSizes,
       fromTag: stored.full.fromTag,
     };
   }
@@ -393,6 +417,8 @@ export function fromStoredItem(stored: StoredItem, catalog: Product[]): QuoteIte
     sub: stored.sub,
     images: product?.images ?? [],
     dimensions: product?.dimensions ?? [],
+    descImages: product?.descImages ?? [],
+    descImageSizes: product?.descImageSizes ?? [],
   };
 }
 
@@ -416,6 +442,14 @@ function sanitizeStoredItem(raw: unknown): StoredItem | null {
             price: typeof f.price === "number" && Number.isFinite(f.price) ? f.price : null,
             images: Array.isArray(f.images) ? f.images.filter((s): s is string => typeof s === "string") : [],
             dimensions: Array.isArray(f.dimensions) ? f.dimensions.filter((s): s is string => typeof s === "string") : [],
+            descImages: Array.isArray(f.descImages) ? f.descImages.filter((s): s is string => typeof s === "string") : [],
+            descImageSizes: Array.isArray(f.descImageSizes)
+              ? f.descImageSizes.map((s): DescImageSize => {
+                  if (!s || typeof s !== "object") return null;
+                  const so = s as Record<string, unknown>;
+                  return typeof so.width === "number" && typeof so.height === "number" ? { width: so.width, height: so.height } : null;
+                })
+              : [],
             fromTag: f.fromTag === true,
           };
         })()

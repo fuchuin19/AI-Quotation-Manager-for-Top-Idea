@@ -23,6 +23,7 @@ loadEnv();
 
 const { parseWorkbook, normalizeSku } = require('../lib/catalog-import/xlsx-parse');
 const { dedupe } = require('../lib/catalog-import/dedupe');
+const { collectNeededImagePairs, cropKey, hasAnyCrop } = require('../lib/catalog-import/diff');
 const { processImage } = require('./lib/images');
 const { openXlsx } = require('./lib/zip');
 const r2 = require('./lib/r2');
@@ -96,6 +97,19 @@ function printCommonReport({ sheetsProcessed, skippedSheets, sheetsWithMultipleP
   console.log(`SKUs with no price: ${missing.length}`);
   for (const [sheet, count] of noPriceBySheet(merged)) console.log(`  - ${sheet}: ${count}`);
 
+  const withCrops = merged.filter(hasAnyCrop);
+  console.log(`\nProducts with at least one cropped source image (<a:srcRect>): ${withCrops.length}`);
+
+  const withDescImages = merged.filter((m) => (m.descImageMediaPaths || []).length > 0);
+  const totalDescImages = withDescImages.reduce((s, m) => s + m.descImageMediaPaths.length, 0);
+  console.log(`\nProducts with images anchored over ITEM DESCRIPTIONS (descImages): ${withDescImages.length}`);
+  console.log(`Total description-column images across the catalogue: ${totalDescImages}`);
+  if (withDescImages.length) {
+    const bySheet = new Map();
+    for (const m of withDescImages) for (const s of m.sourceSheets) bySheet.set(s, (bySheet.get(s) || 0) + 1);
+    for (const [sheet, count] of [...bySheet.entries()].sort((a, b) => b[1] - a[1])) console.log(`  - ${sheet}: ${count}`);
+  }
+
   if (packagesOnlyNoPrice.length) {
     console.log(`\nSKUs that exist ONLY in GROHE PACKAGES and have no price anywhere (${packagesOnlyNoPrice.length}):`);
     console.log('  ' + packagesOnlyNoPrice.join(', '));
@@ -153,7 +167,9 @@ async function runFullOrIncremental(ctx) {
       existing.price === m.price &&
       existing.priceMissing === m.priceMissing &&
       (existing.images || []).length === m.imageMediaPaths.length &&
-      (existing.dimensions || []).length === m.dimensionMediaPaths.length;
+      (existing.dimensions || []).length === m.dimensionMediaPaths.length &&
+      (existing.descImages || []).length === (m.descImageMediaPaths || []).length &&
+      !hasAnyCrop(m);
 
     if (unchanged) {
       finalProducts.push(existing);
@@ -163,33 +179,31 @@ async function runFullOrIncremental(ctx) {
     }
   }
 
-  // Collect every distinct (mediaPath, role) needed by the products that
-  // actually require (re)processing, so identical images referenced by many
-  // SKUs are only read/compressed/uploaded once per run.
-  const neededPairs = new Map(); // key -> { mediaPath, role }
-  for (const { product } of toProcess) {
-    for (const mp of product.imageMediaPaths) neededPairs.set(`${mp}:photo`, { mediaPath: mp, role: 'photo' });
-    for (const mp of product.dimensionMediaPaths) neededPairs.set(`${mp}:dim`, { mediaPath: mp, role: 'dim' });
-  }
+  // Collect every distinct (mediaPath, role, crop) needed by the products
+  // that actually require (re)processing, so identical images referenced by
+  // many SKUs are only read/compressed/uploaded once per run. A cropped and
+  // an uncropped use of the same source file are treated as distinct.
+  const neededPairs = collectNeededImagePairs(toProcess.map((t) => t.product));
 
   console.log(`\nProducts unchanged (reused from existing catalog): ${unchangedCount}`);
   console.log(`Products to (re)process: ${toProcess.length}`);
-  console.log(`Distinct images to resolve: ${neededPairs.size}`);
+  console.log(`Distinct images to resolve: ${neededPairs.length}`);
 
   let imagesUploadedCount = 0;
   let imageBytesBefore = 0;
   let imageBytesAfter = 0;
   const unsupportedList = [];
-  const urlCache = new Map(); // key -> url
+  const urlCache = new Map(); // "mediaPath:role:cropKey" -> url
   let done = 0;
 
-  await mapLimit([...neededPairs.entries()], CONCURRENCY, async ([key, { mediaPath, role }]) => {
+  await mapLimit(neededPairs, CONCURRENCY, async ({ mediaPath, role, crop }) => {
+    const key = `${mediaPath}:${role}:${cropKey(crop)}`;
     const buffer = await zip.readBuffer(mediaPath);
     if (!buffer) {
       console.warn(`  ! ${mediaPath} referenced by a drawing anchor but missing from the archive — skipped.`);
       return;
     }
-    const result = await processImage(buffer, mediaPath, role);
+    const result = await processImage(buffer, mediaPath, role, crop);
     const { uploaded, url } = await r2.uploadImageIfMissing(client, bucket, result.key, result.buffer, result.contentType);
     if (uploaded) {
       imagesUploadedCount++;
@@ -199,14 +213,39 @@ async function runFullOrIncremental(ctx) {
     if (result.unsupportedFormat) unsupportedList.push(mediaPath);
     urlCache.set(key, url);
     done++;
-    if (done % 200 === 0) console.log(`  ...resolved ${done}/${neededPairs.size} images`);
+    if (done % 200 === 0) console.log(`  ...resolved ${done}/${neededPairs.length} images`);
   });
 
   let newCount = 0;
   let updatedCount = 0;
   for (const { product: m, existing } of toProcess) {
-    const images = m.imageMediaPaths.map((mp) => urlCache.get(`${mp}:photo`)).filter(Boolean);
-    const dimensions = m.dimensionMediaPaths.map((mp) => urlCache.get(`${mp}:dim`)).filter(Boolean);
+    const imageCrops = m.imageCrops || [];
+    const images = [];
+    m.imageMediaPaths.forEach((mp, i) => {
+      const url = urlCache.get(`${mp}:photo:${cropKey(imageCrops[i] || null)}`);
+      if (url) images.push(url);
+    });
+    const dimensionCrops = m.dimensionCrops || [];
+    const dimensions = [];
+    m.dimensionMediaPaths.forEach((mp, i) => {
+      const url = urlCache.get(`${mp}:dim:${cropKey(dimensionCrops[i] || null)}`);
+      if (url) dimensions.push(url);
+    });
+    // descImageSizes stays parallel to descImages (same index = same image) —
+    // built together so a URL that failed to resolve doesn't shift a later
+    // size out of alignment with its image.
+    const descImagePaths = m.descImageMediaPaths || [];
+    const descImageSizesRaw = m.descImageSizes || [];
+    const descImageCrops = m.descImageCrops || [];
+    const descImages = [];
+    const descImageSizes = [];
+    descImagePaths.forEach((mp, i) => {
+      const url = urlCache.get(`${mp}:photo:${cropKey(descImageCrops[i] || null)}`);
+      if (url) {
+        descImages.push(url);
+        descImageSizes.push(descImageSizesRaw[i] || null);
+      }
+    });
     finalProducts.push({
       sku: m.sku,
       brand: m.brand,
@@ -215,6 +254,8 @@ async function runFullOrIncremental(ctx) {
       priceMissing: m.priceMissing,
       images,
       dimensions,
+      descImages,
+      descImageSizes,
     });
     if (existing) updatedCount++;
     else newCount++;

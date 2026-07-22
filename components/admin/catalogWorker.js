@@ -13,14 +13,37 @@
 //   { type: "error", message }
 const { parseWorkbook } = require("../../lib/catalog-import/xlsx-parse");
 const { dedupe } = require("../../lib/catalog-import/dedupe");
-const { diffCatalog, collectNeededImagePairs } = require("../../lib/catalog-import/diff");
+const { diffCatalog, collectNeededImagePairs, cropKey } = require("../../lib/catalog-import/diff");
 const { openXlsxFromBuffer } = require("../../lib/catalog-import/zip-browser");
 const { processImage, contentHash, keyInfoFor } = require("../../lib/catalog-import/image-browser");
 
 function buildRecord(m, urlByPair) {
-  const images = m.imageMediaPaths.map((mp) => urlByPair.get(`${mp}:photo`)).filter(Boolean);
-  const dimensions = m.dimensionMediaPaths.map((mp) => urlByPair.get(`${mp}:dim`)).filter(Boolean);
-  return { sku: m.sku, brand: m.brand, desc: m.desc, price: m.price, priceMissing: m.priceMissing, images, dimensions };
+  const images = [];
+  const imageCrops = m.imageCrops || [];
+  m.imageMediaPaths.forEach((mp, i) => {
+    const url = urlByPair.get(`${mp}:photo:${cropKey(imageCrops[i] || null)}`);
+    if (url) images.push(url);
+  });
+  const dimensions = [];
+  const dimensionCrops = m.dimensionCrops || [];
+  m.dimensionMediaPaths.forEach((mp, i) => {
+    const url = urlByPair.get(`${mp}:dim:${cropKey(dimensionCrops[i] || null)}`);
+    if (url) dimensions.push(url);
+  });
+  // descImageSizes stays parallel to descImages (same index = same image).
+  const descImagePaths = m.descImageMediaPaths || [];
+  const descImageSizesRaw = m.descImageSizes || [];
+  const descImageCrops = m.descImageCrops || [];
+  const descImages = [];
+  const descImageSizes = [];
+  descImagePaths.forEach((mp, i) => {
+    const url = urlByPair.get(`${mp}:photo:${cropKey(descImageCrops[i] || null)}`);
+    if (url) {
+      descImages.push(url);
+      descImageSizes.push(descImageSizesRaw[i] || null);
+    }
+  });
+  return { sku: m.sku, brand: m.brand, desc: m.desc, price: m.price, priceMissing: m.priceMissing, images, dimensions, descImages, descImageSizes };
 }
 
 self.onmessage = async (e) => {
@@ -54,8 +77,9 @@ self.onmessage = async (e) => {
     let bytesToUpload = 0;
     let done = 0;
 
-    for (const { mediaPath, role } of neededPairs) {
+    for (const { mediaPath, role, crop } of neededPairs) {
       const raw = await zip.readBuffer(mediaPath);
+      const pairKey = `${mediaPath}:${role}:${cropKey(crop)}`;
       if (!raw) {
         // Referenced by a drawing anchor but missing from the archive —
         // skip it rather than fail the whole import, same as the CLI script.
@@ -64,7 +88,7 @@ self.onmessage = async (e) => {
         continue;
       }
 
-      const hash = await contentHash(raw);
+      const hash = await contentHash(raw, crop);
       const { key, contentType } = keyInfoFor(hash, mediaPath, role);
 
       let existsResult;
@@ -82,13 +106,13 @@ self.onmessage = async (e) => {
       }
 
       if (existsResult.exists) {
-        urlByPair.set(`${mediaPath}:${role}`, `${base}/${key}`);
+        urlByPair.set(pairKey, `${base}/${key}`);
       } else {
-        const result = await processImage(raw, mediaPath, role, hash);
+        const result = await processImage(raw, mediaPath, role, hash, crop);
         if (result.unsupportedFormat) unsupportedFormats.push(mediaPath);
         imagesToUpload.push({ key: result.key, contentType: result.contentType, buffer: result.buffer, uploadUrl: existsResult.uploadUrl });
         bytesToUpload += result.finalBytes;
-        urlByPair.set(`${mediaPath}:${role}`, `${base}/${result.key}`);
+        urlByPair.set(pairKey, `${base}/${result.key}`);
       }
 
       done++;

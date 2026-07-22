@@ -27,13 +27,27 @@ export interface QuoteItem {
   sub: string;
   images?: string[];
   dimensions?: string[];
+  // Images anchored over ITEM DESCRIPTIONS in the source spreadsheet — placed
+  // inside the description cell itself (stacked below the text) rather than
+  // the IMAGE column. See placeStackedImagesBelow() below.
+  descImages?: string[];
+  // Parallel to descImages (same index = same image): the pixel size that
+  // image was drawn at in the source spreadsheet. When present, the export
+  // reproduces that original size (shrinking only if it wouldn't otherwise
+  // fit) instead of stretching the image to fill the column width.
+  descImageSizes?: ({ width: number; height: number } | null)[];
 }
 
 const ROMAN = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii', 'xiii', 'xiv', 'xv'];
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 const COL = { NO: 1, ITEM_CODE: 2, IMAGE: 3, DESC: 4, DIMENSION: 5, QTY: 6, UNIT_PRICE: 7, TOTAL: 8 } as const;
-const COL_WIDTHS = [6, 20, 22, 45, 22, 6, 14, 14];
+// ITEM_CODE is 26 (not 20): the median real SKU is ~8 chars and wraps fine
+// either way, but the ~19-22 char range (real examples: "FFAS4956-601440BF0")
+// was breaking into 4 choppy lines at 20 — 26 gives those room to wrap
+// cleanly into 1-2 lines instead. Genuinely long outliers (up to ~42 chars)
+// still wrap into several lines regardless of width; that's expected.
+const COL_WIDTHS = [6, 26, 22, 45, 22, 6, 14, 14];
 const ITEM_ROW_HEIGHT = 95; // points — within the 90-110 range that fits images legibly
 const MONEY_FMT = '#,##0'; // whole ringgit only — no cents anywhere
 const IMAGE_FETCH_TIMEOUT_MS = 10_000;
@@ -172,6 +186,7 @@ async function buildImageCache(items: QuoteItem[], publicBase: string | undefine
   for (const it of items) {
     for (const u of it.images || []) urls.add(resolveImageUrl(u, publicBase));
     for (const u of it.dimensions || []) urls.add(resolveImageUrl(u, publicBase));
+    for (const u of it.descImages || []) urls.add(resolveImageUrl(u, publicBase));
   }
   const cache = new Map<string, FetchedImage | null>();
   // Fetched in parallel and cached by URL, so a SKU reused across several
@@ -272,6 +287,135 @@ function placeImagesInCell(
 }
 
 // ---------------------------------------------------------------------------
+// Description-column images
+// ---------------------------------------------------------------------------
+// Text and images can't interleave inside one Excel cell: the description
+// cell's text always renders as one block, so descImages are stacked BELOW
+// it within the same cell, and the row is made tall enough to fit both.
+// There's no real text-layout API available here (ExcelJS doesn't measure
+// rendered text), so the text block height is an estimate from character
+// count and the column's character width — good enough to avoid clipping in
+// the common case, not a pixel-exact reproduction of Excel's own wrapping.
+const DESC_FONT_SIZE_PT = 11; // matches the worksheet's default font (Calibri 11)
+const LINE_HEIGHT_FACTOR = 1.2; // standard single-spacing approximation
+const DESC_TEXT_TOP_PAD_PT = 4;
+const DESC_TEXT_BOTTOM_PAD_PT = 4;
+const DESC_IMAGE_GAP_PT = 6; // gap between the text block and the first image
+const DESC_IMAGE_STACK_GAP_PX = 3; // gap between stacked images
+// Fallback cap used only when an image's original source-sheet size isn't
+// known (older catalogue data, or a re-import that hasn't run yet) — keeps
+// it roughly the scale of the IMAGE column's own photo rather than
+// stretched to fill the full column width.
+const DESC_IMAGE_MAX_HEIGHT_PX = 100;
+// When the original size IS known, it's used as-is (never upscaled) and
+// only shrunk if it wouldn't otherwise fit — this cap is a generous safety
+// net against a pathological outlier, not the normal constraint: every
+// descImage seen in the real catalogue is well under 230px either way,
+// since these are small illustrations, not full product photos.
+const DESC_IMAGE_SAFETY_MAX_HEIGHT_PX = 260;
+
+/** Fits an image at its own natural size, only shrinking (never enlarging)
+ *  to stay within the given bounds — reproduces "how big it was originally
+ *  drawn" rather than stretching to fill the available space. */
+function fitOriginalSize(naturalW: number, naturalH: number, maxW: number, maxH: number): { width: number; height: number } {
+  const scale = Math.min(1, maxW / naturalW, maxH / naturalH);
+  return { width: Math.max(1, Math.round(naturalW * scale)), height: Math.max(1, Math.round(naturalH * scale)) };
+}
+
+function estimateTextHeightPt(text: string, colWidthChars: number, fontSizePt = DESC_FONT_SIZE_PT): number {
+  if (!text) return 0;
+  // colWidthChars is already Excel's own "chars of the default font" unit,
+  // so it doubles directly as an estimate of characters-per-wrapped-line.
+  const charsPerLine = Math.max(10, colWidthChars - 3); // small deduction for cell padding
+  const lines = text.split('\n');
+  let totalWrappedLines = 0;
+  for (const line of lines) totalWrappedLines += Math.max(1, Math.ceil(line.length / charsPerLine));
+  return totalWrappedLines * fontSizePt * LINE_HEIGHT_FACTOR;
+}
+
+/** Scaled (aspect-preserved) heights for a stack of images, plus which URLs
+ *  actually resolved — shared between the row-height calculation and the
+ *  actual placement so the two never drift apart.
+ *
+ *  When originalSizes[i] is known (the pixel size that image was drawn at
+ *  in the source spreadsheet), it's reproduced as-is, only shrunk if it
+ *  wouldn't otherwise fit — never stretched up to fill the column. Falls
+ *  back to fitting the fetched image's raw resolution under a fixed cap
+ *  for the (older-data) case where the original size wasn't captured. */
+function measureStackedImages(
+  urls: string[],
+  fetchedCache: Map<string, FetchedImage | null>,
+  colWidthChars: number,
+  originalSizes?: ({ width: number; height: number } | null)[]
+): { available: { url: string; img: FetchedImage }[]; sizes: { width: number; height: number }[]; totalHeightPx: number } {
+  const available = urls
+    .map((url, i) => ({ url, img: fetchedCache.get(url), originalSize: originalSizes?.[i] ?? null }))
+    .filter((x): x is { url: string; img: FetchedImage; originalSize: { width: number; height: number } | null } => !!x.img);
+
+  const cellWidthPx = colWidthToPixels(colWidthChars);
+  const padPx = 4;
+  const maxWidthPx = cellWidthPx - padPx * 2;
+
+  const sizes = available.map(({ img, originalSize }) =>
+    originalSize
+      ? fitOriginalSize(originalSize.width, originalSize.height, maxWidthPx, DESC_IMAGE_SAFETY_MAX_HEIGHT_PX)
+      : fitWithin(img.width, img.height, maxWidthPx, DESC_IMAGE_MAX_HEIGHT_PX)
+  );
+  const totalHeightPx =
+    sizes.reduce((s, sz) => s + sz.height, 0) + Math.max(0, sizes.length - 1) * DESC_IMAGE_STACK_GAP_PX + (sizes.length > 0 ? padPx * 2 : 0);
+
+  return { available, sizes, totalHeightPx };
+}
+
+/** Places a pre-measured stack of images centred horizontally in a column,
+ *  starting at a given vertical offset (below the description text). */
+function placeStackedImagesBelow(
+  workbook: ExcelJS.Workbook,
+  worksheet: ExcelJS.Worksheet,
+  imageIdCache: Map<string, number>,
+  available: { url: string; img: FetchedImage }[],
+  sizes: { width: number; height: number }[],
+  colIndex0: number,
+  rowIndex0: number,
+  colWidthChars: number,
+  topOffsetPt: number
+) {
+  if (available.length === 0) return;
+
+  const cellWidthPx = colWidthToPixels(colWidthChars);
+  const cellWidthEmu = cellWidthPx * EMU_PER_PIXEL;
+  const padEmu = 4 * EMU_PER_PIXEL;
+  const gapEmu = DESC_IMAGE_STACK_GAP_PX * EMU_PER_PIXEL;
+
+  let cursorEmu = topOffsetPt * EMU_PER_POINT + padEmu;
+
+  available.forEach(({ url, img }, i) => {
+    let imageId = imageIdCache.get(url);
+    if (imageId === undefined) {
+      imageId = workbook.addImage({ buffer: img.buffer, extension: img.extension } as unknown as ExcelJS.Image);
+      imageIdCache.set(url, imageId);
+    }
+
+    const { width, height } = sizes[i];
+    const widthEmu = width * EMU_PER_PIXEL;
+    const heightEmu = height * EMU_PER_PIXEL;
+    const colOffEmu = Math.max(0, Math.round((cellWidthEmu - widthEmu) / 2));
+
+    worksheet.addImage(imageId, {
+      tl: {
+        nativeCol: colIndex0,
+        nativeColOff: colOffEmu,
+        nativeRow: rowIndex0,
+        nativeRowOff: Math.round(cursorEmu),
+      },
+      ext: { width, height },
+    } as unknown as ExcelJS.ImagePosition);
+
+    cursorEmu += heightEmu + gapEmu;
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Styling helpers
 // ---------------------------------------------------------------------------
 
@@ -364,7 +508,6 @@ export async function buildQuotationWorkbook(session: SessionInfo, items: QuoteI
 
       sub.rows.forEach((it, ri) => {
         const row = worksheet.getRow(rowNumber);
-        row.height = ITEM_ROW_HEIGHT;
 
         // The discount % itself never appears on the exported quotation —
         // instead, when the price paid differs from the catalogue price, the
@@ -377,6 +520,27 @@ export async function buildQuotationWorkbook(session: SessionInfo, items: QuoteI
           listPrice !== null && net !== null && net !== listPrice
             ? `${baseDesc}\nList Price: ${money(listPrice)}`
             : baseDesc;
+
+        const resolvedDescImages = (it.descImages || []).map((u) => resolveImageUrl(u, publicBase));
+        const descImageStack = measureStackedImages(
+          resolvedDescImages,
+          imageCache,
+          COL_WIDTHS[COL.DESC - 1],
+          it.descImageSizes
+        );
+        const hasDescImages = descImageStack.available.length > 0;
+
+        let textTopOffsetPt = DESC_TEXT_TOP_PAD_PT;
+        if (hasDescImages) {
+          const textHeightPt = estimateTextHeightPt(desc, COL_WIDTHS[COL.DESC - 1]);
+          const imagesHeightPt = descImageStack.totalHeightPx * (EMU_PER_PIXEL / EMU_PER_POINT);
+          const neededHeightPt =
+            DESC_TEXT_TOP_PAD_PT + textHeightPt + DESC_IMAGE_GAP_PT + imagesHeightPt + DESC_TEXT_BOTTOM_PAD_PT;
+          row.height = Math.max(ITEM_ROW_HEIGHT, neededHeightPt);
+          textTopOffsetPt = DESC_TEXT_TOP_PAD_PT + textHeightPt + DESC_IMAGE_GAP_PT;
+        } else {
+          row.height = ITEM_ROW_HEIGHT;
+        }
 
         row.getCell(COL.NO).value = ri + 1;
         row.getCell(COL.ITEM_CODE).value = normalizeSku(it.sku);
@@ -393,9 +557,20 @@ export async function buildQuotationWorkbook(session: SessionInfo, items: QuoteI
         // exists to fit the images, and text sitting at the top of that
         // extra height while the images sit centred looked misaligned.
         row.getCell(COL.NO).alignment = { horizontal: 'center', vertical: 'middle' };
-        row.getCell(COL.ITEM_CODE).alignment = { horizontal: 'left', vertical: 'middle' };
+        // wrapText so a long SKU wraps onto more lines within its own column
+        // instead of visually overflowing past the column boundary into the
+        // IMAGE column next to it.
+        row.getCell(COL.ITEM_CODE).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
         row.getCell(COL.IMAGE).alignment = { horizontal: 'center', vertical: 'middle' };
-        row.getCell(COL.DESC).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+        // Text sits at the top of the cell when descImages are stacked below
+        // it — vertical-centring the text would push it down into the space
+        // reserved for the images. Rows with no descImages keep the original
+        // vertical-centred look.
+        row.getCell(COL.DESC).alignment = {
+          horizontal: 'left',
+          vertical: hasDescImages ? 'top' : 'middle',
+          wrapText: true,
+        };
         row.getCell(COL.DIMENSION).alignment = { horizontal: 'center', vertical: 'middle' };
         row.getCell(COL.QTY).alignment = { horizontal: 'center', vertical: 'middle' };
         row.getCell(COL.UNIT_PRICE).numFmt = MONEY_FMT;
@@ -407,8 +582,22 @@ export async function buildQuotationWorkbook(session: SessionInfo, items: QuoteI
 
         const resolvedImages = (it.images || []).map((u) => resolveImageUrl(u, publicBase));
         const resolvedDims = (it.dimensions || []).map((u) => resolveImageUrl(u, publicBase));
-        placeImagesInCell(workbook, worksheet, imageIdCache, resolvedImages, imageCache, COL.IMAGE - 1, rowNumber - 1, COL_WIDTHS[COL.IMAGE - 1], ITEM_ROW_HEIGHT);
-        placeImagesInCell(workbook, worksheet, imageIdCache, resolvedDims, imageCache, COL.DIMENSION - 1, rowNumber - 1, COL_WIDTHS[COL.DIMENSION - 1], ITEM_ROW_HEIGHT);
+        const itemRowHeight = row.height || ITEM_ROW_HEIGHT;
+        placeImagesInCell(workbook, worksheet, imageIdCache, resolvedImages, imageCache, COL.IMAGE - 1, rowNumber - 1, COL_WIDTHS[COL.IMAGE - 1], itemRowHeight);
+        placeImagesInCell(workbook, worksheet, imageIdCache, resolvedDims, imageCache, COL.DIMENSION - 1, rowNumber - 1, COL_WIDTHS[COL.DIMENSION - 1], itemRowHeight);
+        if (hasDescImages) {
+          placeStackedImagesBelow(
+            workbook,
+            worksheet,
+            imageIdCache,
+            descImageStack.available,
+            descImageStack.sizes,
+            COL.DESC - 1,
+            rowNumber - 1,
+            COL_WIDTHS[COL.DESC - 1],
+            textTopOffsetPt
+          );
+        }
 
         grandTotal += lineTotal(it);
         rowNumber++;

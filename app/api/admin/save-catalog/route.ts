@@ -24,7 +24,12 @@ function isValidProduct(p: unknown): p is Product {
     (o.price === null || typeof o.price === "number") &&
     typeof o.priceMissing === "boolean" &&
     Array.isArray(o.images) &&
-    Array.isArray(o.dimensions)
+    Array.isArray(o.dimensions) &&
+    // Optional: older catalogue entries saved before these fields existed
+    // pass through unchanged (see diff.js's unchangedSkus/removedSkus), so
+    // they must not be required — only type-checked when present.
+    (o.descImages === undefined || Array.isArray(o.descImages)) &&
+    (o.descImageSizes === undefined || Array.isArray(o.descImageSizes))
   );
 }
 

@@ -11,6 +11,17 @@ export interface Product {
   priceMissing: boolean;
   images: string[];
   dimensions: string[];
+  /** Images anchored over the ITEM DESCRIPTIONS column in the source
+   *  spreadsheet, rendered inside the description cell rather than the
+   *  IMAGE column on export. Optional — older catalogue entries saved
+   *  before this field existed won't have it. */
+  descImages?: string[];
+  /** Parallel to descImages (same index = same image): the pixel size that
+   *  image was actually drawn at in the source spreadsheet, so the export
+   *  can reproduce it at its original size rather than stretching it to
+   *  fill the column. null for an entry whose original size couldn't be
+   *  determined. Optional for the same reason as descImages. */
+  descImageSizes?: ({ width: number; height: number } | null)[];
 }
 
 const TTL_MS = 60 * 1000;
