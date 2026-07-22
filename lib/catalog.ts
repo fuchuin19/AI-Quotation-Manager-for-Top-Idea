@@ -3,6 +3,11 @@
 // The TTL matches /api/products' revalidate window so a catalogue update
 // (re-running the import script) becomes visible everywhere within about a
 // minute, without hammering R2 on every single scan.
+/** Pixel size an image was actually drawn at in the source spreadsheet, so
+ *  the export can reproduce it at its original size rather than stretching
+ *  it to fill the cell. null when the original size couldn't be determined. */
+export type ImageSize = { width: number; height: number } | null;
+
 export interface Product {
   sku: string;
   brand: string;
@@ -10,18 +15,19 @@ export interface Product {
   price: number | null;
   priceMissing: boolean;
   images: string[];
+  /** Parallel to images (same index = same image). Optional — older
+   *  catalogue entries saved before this field existed won't have it. */
+  imageSizes?: ImageSize[];
   dimensions: string[];
+  /** Parallel to dimensions. Optional, same reason as imageSizes. */
+  dimensionSizes?: ImageSize[];
   /** Images anchored over the ITEM DESCRIPTIONS column in the source
    *  spreadsheet, rendered inside the description cell rather than the
    *  IMAGE column on export. Optional — older catalogue entries saved
    *  before this field existed won't have it. */
   descImages?: string[];
-  /** Parallel to descImages (same index = same image): the pixel size that
-   *  image was actually drawn at in the source spreadsheet, so the export
-   *  can reproduce it at its original size rather than stretching it to
-   *  fill the column. null for an entry whose original size couldn't be
-   *  determined. Optional for the same reason as descImages. */
-  descImageSizes?: ({ width: number; height: number } | null)[];
+  /** Parallel to descImages. Optional, same reason as descImages. */
+  descImageSizes?: ImageSize[];
 }
 
 const TTL_MS = 60 * 1000;

@@ -37,10 +37,11 @@ export interface Quotation extends QuotationMeta {
  * blank/manual lines aren't in the catalogue at all, so they carry a `full`
  * companion with everything a catalogue lookup would otherwise have supplied.
  */
-/** Parallel to a descImages array (same index = same image): the pixel size
- *  that image was drawn at in the source spreadsheet, so the export can
- *  reproduce it at its original size instead of stretching it. null when
- *  the original size couldn't be determined for that particular image. */
+/** Parallel to an images/dimensions/descImages array (same index = same
+ *  image): the pixel size that image was drawn at in the source spreadsheet,
+ *  so the export can reproduce it at its original size instead of
+ *  stretching it. null when the original size couldn't be determined for
+ *  that particular image. */
 export type DescImageSize = { width: number; height: number } | null;
 
 export interface StoredItem {
@@ -55,7 +56,9 @@ export interface StoredItem {
     desc: string;
     price: number | null;
     images: string[];
+    imageSizes?: DescImageSize[];
     dimensions: string[];
+    dimensionSizes?: DescImageSize[];
     descImages?: string[];
     descImageSizes?: DescImageSize[];
     fromTag?: boolean;
@@ -76,7 +79,9 @@ export interface QuoteItem {
   area: string;
   sub: string;
   images: string[];
+  imageSizes?: DescImageSize[];
   dimensions: string[];
+  dimensionSizes?: DescImageSize[];
   /** Images anchored over ITEM DESCRIPTIONS in the source spreadsheet —
    *  rendered inside the description cell on export, not the IMAGE column. */
   descImages?: string[];
@@ -99,7 +104,9 @@ export interface PendingItem {
   discount: number;
   netPriceOverride: number | null;
   images: string[];
+  imageSizes?: DescImageSize[];
   dimensions: string[];
+  dimensionSizes?: DescImageSize[];
   descImages?: string[];
   descImageSizes?: DescImageSize[];
   /** Raw text of the price the user types in when priceMissing is true. */
@@ -364,7 +371,9 @@ export function toStoredItem(it: QuoteItem): StoredItem {
         desc: it.desc,
         price: it.price,
         images: it.images,
+        imageSizes: it.imageSizes,
         dimensions: it.dimensions,
+        dimensionSizes: it.dimensionSizes,
         descImages: it.descImages,
         descImageSizes: it.descImageSizes,
         fromTag: it.fromTag,
@@ -395,7 +404,9 @@ export function fromStoredItem(stored: StoredItem, catalog: Product[]): QuoteIte
       area: stored.area,
       sub: stored.sub,
       images: stored.full.images,
+      imageSizes: stored.full.imageSizes,
       dimensions: stored.full.dimensions,
+      dimensionSizes: stored.full.dimensionSizes,
       descImages: stored.full.descImages,
       descImageSizes: stored.full.descImageSizes,
       fromTag: stored.full.fromTag,
@@ -416,7 +427,9 @@ export function fromStoredItem(stored: StoredItem, catalog: Product[]): QuoteIte
     area: stored.area,
     sub: stored.sub,
     images: product?.images ?? [],
+    imageSizes: product?.imageSizes ?? [],
     dimensions: product?.dimensions ?? [],
+    dimensionSizes: product?.dimensionSizes ?? [],
     descImages: product?.descImages ?? [],
     descImageSizes: product?.descImageSizes ?? [],
   };
@@ -429,6 +442,15 @@ export function fromStoredItem(stored: StoredItem, catalog: Product[]): QuoteIte
 // with local-storage.ts's loadJSON, which catches the array itself being
 // the wrong shape; this catches individual entries inside a valid array
 // being wrong.
+function sanitizeSizeArray(raw: unknown): DescImageSize[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((s): DescImageSize => {
+    if (!s || typeof s !== "object") return null;
+    const so = s as Record<string, unknown>;
+    return typeof so.width === "number" && typeof so.height === "number" ? { width: so.width, height: so.height } : null;
+  });
+}
+
 function sanitizeStoredItem(raw: unknown): StoredItem | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
@@ -441,15 +463,11 @@ function sanitizeStoredItem(raw: unknown): StoredItem | null {
             desc: typeof f.desc === "string" ? f.desc : "",
             price: typeof f.price === "number" && Number.isFinite(f.price) ? f.price : null,
             images: Array.isArray(f.images) ? f.images.filter((s): s is string => typeof s === "string") : [],
+            imageSizes: sanitizeSizeArray(f.imageSizes),
             dimensions: Array.isArray(f.dimensions) ? f.dimensions.filter((s): s is string => typeof s === "string") : [],
+            dimensionSizes: sanitizeSizeArray(f.dimensionSizes),
             descImages: Array.isArray(f.descImages) ? f.descImages.filter((s): s is string => typeof s === "string") : [],
-            descImageSizes: Array.isArray(f.descImageSizes)
-              ? f.descImageSizes.map((s): DescImageSize => {
-                  if (!s || typeof s !== "object") return null;
-                  const so = s as Record<string, unknown>;
-                  return typeof so.width === "number" && typeof so.height === "number" ? { width: so.width, height: so.height } : null;
-                })
-              : [],
+            descImageSizes: sanitizeSizeArray(f.descImageSizes),
             fromTag: f.fromTag === true,
           };
         })()

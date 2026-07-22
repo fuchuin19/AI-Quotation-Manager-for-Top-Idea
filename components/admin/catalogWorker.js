@@ -18,19 +18,29 @@ const { openXlsxFromBuffer } = require("../../lib/catalog-import/zip-browser");
 const { processImage, contentHash, keyInfoFor } = require("../../lib/catalog-import/image-browser");
 
 function buildRecord(m, urlByPair) {
+  // *Sizes stay parallel to their own array (same index = same image).
   const images = [];
+  const imageSizes = [];
   const imageCrops = m.imageCrops || [];
+  const imageSizesRaw = m.imageSizes || [];
   m.imageMediaPaths.forEach((mp, i) => {
     const url = urlByPair.get(`${mp}:photo:${cropKey(imageCrops[i] || null)}`);
-    if (url) images.push(url);
+    if (url) {
+      images.push(url);
+      imageSizes.push(imageSizesRaw[i] || null);
+    }
   });
   const dimensions = [];
+  const dimensionSizes = [];
   const dimensionCrops = m.dimensionCrops || [];
+  const dimensionSizesRaw = m.dimensionSizes || [];
   m.dimensionMediaPaths.forEach((mp, i) => {
     const url = urlByPair.get(`${mp}:dim:${cropKey(dimensionCrops[i] || null)}`);
-    if (url) dimensions.push(url);
+    if (url) {
+      dimensions.push(url);
+      dimensionSizes.push(dimensionSizesRaw[i] || null);
+    }
   });
-  // descImageSizes stays parallel to descImages (same index = same image).
   const descImagePaths = m.descImageMediaPaths || [];
   const descImageSizesRaw = m.descImageSizes || [];
   const descImageCrops = m.descImageCrops || [];
@@ -43,7 +53,19 @@ function buildRecord(m, urlByPair) {
       descImageSizes.push(descImageSizesRaw[i] || null);
     }
   });
-  return { sku: m.sku, brand: m.brand, desc: m.desc, price: m.price, priceMissing: m.priceMissing, images, dimensions, descImages, descImageSizes };
+  return {
+    sku: m.sku,
+    brand: m.brand,
+    desc: m.desc,
+    price: m.price,
+    priceMissing: m.priceMissing,
+    images,
+    imageSizes,
+    dimensions,
+    dimensionSizes,
+    descImages,
+    descImageSizes,
+  };
 }
 
 self.onmessage = async (e) => {

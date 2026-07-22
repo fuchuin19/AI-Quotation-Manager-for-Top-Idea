@@ -23,7 +23,7 @@ loadEnv();
 
 const { parseWorkbook, normalizeSku } = require('../lib/catalog-import/xlsx-parse');
 const { dedupe } = require('../lib/catalog-import/dedupe');
-const { collectNeededImagePairs, cropKey, hasAnyCrop, missingDescImageSizes } = require('../lib/catalog-import/diff');
+const { collectNeededImagePairs, cropKey, hasAnyCrop, missingAnySizes } = require('../lib/catalog-import/diff');
 const { processImage } = require('./lib/images');
 const { openXlsx } = require('./lib/zip');
 const r2 = require('./lib/r2');
@@ -170,7 +170,7 @@ async function runFullOrIncremental(ctx) {
       (existing.dimensions || []).length === m.dimensionMediaPaths.length &&
       (existing.descImages || []).length === (m.descImageMediaPaths || []).length &&
       !hasAnyCrop(m) &&
-      !missingDescImageSizes(existing, m);
+      !missingAnySizes(existing, m);
 
     if (unchanged) {
       finalProducts.push(existing);
@@ -220,21 +220,31 @@ async function runFullOrIncremental(ctx) {
   let newCount = 0;
   let updatedCount = 0;
   for (const { product: m, existing } of toProcess) {
-    const imageCrops = m.imageCrops || [];
-    const images = [];
-    m.imageMediaPaths.forEach((mp, i) => {
-      const url = urlCache.get(`${mp}:photo:${cropKey(imageCrops[i] || null)}`);
-      if (url) images.push(url);
-    });
-    const dimensionCrops = m.dimensionCrops || [];
-    const dimensions = [];
-    m.dimensionMediaPaths.forEach((mp, i) => {
-      const url = urlCache.get(`${mp}:dim:${cropKey(dimensionCrops[i] || null)}`);
-      if (url) dimensions.push(url);
-    });
-    // descImageSizes stays parallel to descImages (same index = same image) —
+    // *Sizes stay parallel to their own array (same index = same image) —
     // built together so a URL that failed to resolve doesn't shift a later
     // size out of alignment with its image.
+    const imageCrops = m.imageCrops || [];
+    const imageSizesRaw = m.imageSizes || [];
+    const images = [];
+    const imageSizes = [];
+    m.imageMediaPaths.forEach((mp, i) => {
+      const url = urlCache.get(`${mp}:photo:${cropKey(imageCrops[i] || null)}`);
+      if (url) {
+        images.push(url);
+        imageSizes.push(imageSizesRaw[i] || null);
+      }
+    });
+    const dimensionCrops = m.dimensionCrops || [];
+    const dimensionSizesRaw = m.dimensionSizes || [];
+    const dimensions = [];
+    const dimensionSizes = [];
+    m.dimensionMediaPaths.forEach((mp, i) => {
+      const url = urlCache.get(`${mp}:dim:${cropKey(dimensionCrops[i] || null)}`);
+      if (url) {
+        dimensions.push(url);
+        dimensionSizes.push(dimensionSizesRaw[i] || null);
+      }
+    });
     const descImagePaths = m.descImageMediaPaths || [];
     const descImageSizesRaw = m.descImageSizes || [];
     const descImageCrops = m.descImageCrops || [];
@@ -253,6 +263,8 @@ async function runFullOrIncremental(ctx) {
       desc: m.desc,
       price: m.price,
       priceMissing: m.priceMissing,
+      imageSizes,
+      dimensionSizes,
       images,
       dimensions,
       descImages,

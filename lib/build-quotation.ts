@@ -26,15 +26,19 @@ export interface QuoteItem {
   area: string;
   sub: string;
   images?: string[];
+  // Parallel to images (same index = same image): the pixel size that image
+  // was drawn at in the source spreadsheet. When present, the export
+  // reproduces that original size (shrinking only if it wouldn't otherwise
+  // fit) instead of stretching/shrinking it to fill the cell.
+  imageSizes?: ({ width: number; height: number } | null)[];
   dimensions?: string[];
+  // Parallel to dimensions.
+  dimensionSizes?: ({ width: number; height: number } | null)[];
   // Images anchored over ITEM DESCRIPTIONS in the source spreadsheet — placed
   // inside the description cell itself (stacked below the text) rather than
   // the IMAGE column. See placeStackedImagesBelow() below.
   descImages?: string[];
-  // Parallel to descImages (same index = same image): the pixel size that
-  // image was drawn at in the source spreadsheet. When present, the export
-  // reproduces that original size (shrinking only if it wouldn't otherwise
-  // fit) instead of stretching the image to fill the column width.
+  // Parallel to descImages.
   descImageSizes?: ({ width: number; height: number } | null)[];
 }
 
@@ -222,68 +226,130 @@ function fitWithin(naturalW: number, naturalH: number, maxW: number, maxH: numbe
 const EMU_PER_POINT = 12700;
 const EMU_PER_PIXEL = 9525;
 
-/** Places one or more images, centred as a group, within a single cell. */
-function placeImagesInCell(
+// exceljs's own .d.ts declares a conflicting ambient `Buffer` shim
+// (`interface Buffer extends ArrayBuffer {}`) that clashes with @types/node's
+// real Buffer under the esnext lib — a type-only mismatch (the value is a
+// genuine Buffer at runtime), so callers cast the object literal wholesale
+// rather than fighting the merged global type.
+function getOrAddImage(workbook: ExcelJS.Workbook, imageIdCache: Map<string, number>, url: string, img: FetchedImage): number {
+  let imageId = imageIdCache.get(url);
+  if (imageId === undefined) {
+    imageId = workbook.addImage({ buffer: img.buffer, extension: img.extension } as unknown as ExcelJS.Image);
+    imageIdCache.set(url, imageId);
+  }
+  return imageId;
+}
+
+/** Places a pre-measured stack of images, centred as a group both
+ *  horizontally and vertically, within a single cell spanning rowHeightPts. */
+function placeStackedImagesCentered(
   workbook: ExcelJS.Workbook,
   worksheet: ExcelJS.Worksheet,
   imageIdCache: Map<string, number>,
-  urls: string[],
-  fetchedCache: Map<string, FetchedImage | null>,
+  available: { url: string; img: FetchedImage }[],
+  sizes: { width: number; height: number }[],
   colIndex0: number,
   rowIndex0: number,
   colWidthChars: number,
   rowHeightPts: number
 ) {
-  const available = urls
-    .map((url) => ({ url, img: fetchedCache.get(url) }))
-    .filter((x): x is { url: string; img: FetchedImage } => !!x.img);
   if (available.length === 0) return;
 
   const cellWidthPx = colWidthToPixels(colWidthChars);
   const cellWidthEmu = cellWidthPx * EMU_PER_PIXEL;
   const rowHeightEmu = rowHeightPts * EMU_PER_POINT;
+  const gapEmu = IMAGE_STACK_GAP_PX * EMU_PER_PIXEL;
 
-  const padPx = 4; // breathing room from the cell's borders
-  const padEmu = padPx * EMU_PER_PIXEL;
-  const gapEmu = available.length > 1 ? 3 * EMU_PER_PIXEL : 0; // keeps stacked images from touching
-  const usableHeightEmu = rowHeightEmu - padEmu * 2;
-  const slotHeightEmu = usableHeightEmu / available.length;
-  const maxWidthPx = cellWidthPx - padPx * 2;
-  const maxHeightPx = (slotHeightEmu - gapEmu) / EMU_PER_PIXEL;
+  const totalContentHeightEmu =
+    sizes.reduce((s, sz) => s + sz.height * EMU_PER_PIXEL, 0) + Math.max(0, sizes.length - 1) * gapEmu;
+  let cursorEmu = Math.max(0, Math.round((rowHeightEmu - totalContentHeightEmu) / 2));
 
   available.forEach(({ url, img }, i) => {
-    let imageId = imageIdCache.get(url);
-    if (imageId === undefined) {
-      // exceljs's own .d.ts declares a conflicting ambient `Buffer` shim
-      // (`interface Buffer extends ArrayBuffer {}`) that clashes with
-      // @types/node's real Buffer under the esnext lib — a type-only
-      // mismatch (the value is a genuine Buffer at runtime), so the object
-      // literal is cast wholesale rather than fighting the merged global type.
-      imageId = workbook.addImage({ buffer: img.buffer, extension: img.extension } as unknown as ExcelJS.Image);
-      imageIdCache.set(url, imageId);
-    }
-
-    const { width, height } = fitWithin(img.width, img.height, maxWidthPx, maxHeightPx);
+    const imageId = getOrAddImage(workbook, imageIdCache, url, img);
+    const { width, height } = sizes[i];
     const widthEmu = width * EMU_PER_PIXEL;
     const heightEmu = height * EMU_PER_PIXEL;
-
-    // Centre horizontally within the whole cell.
     const colOffEmu = Math.max(0, Math.round((cellWidthEmu - widthEmu) / 2));
-    // Centre vertically within this image's slot (the cell split evenly
-    // across however many images are stacked in it).
-    const slotTopEmu = padEmu + i * slotHeightEmu;
-    const rowOffEmu = Math.max(0, Math.round(slotTopEmu + (slotHeightEmu - heightEmu) / 2));
 
     worksheet.addImage(imageId, {
       tl: {
         nativeCol: colIndex0,
         nativeColOff: colOffEmu,
         nativeRow: rowIndex0,
-        nativeRowOff: rowOffEmu,
+        nativeRowOff: Math.round(cursorEmu),
       },
       ext: { width, height },
     } as unknown as ExcelJS.ImagePosition);
+
+    cursorEmu += heightEmu + gapEmu;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Image sizing — shared by the IMAGE, DIMENSION, and ITEM DESCRIPTIONS
+// columns: every one of them now reproduces the image at the size it was
+// actually drawn at in the source spreadsheet (only shrinking, never
+// stretching), instead of fitting/stretching to whatever the cell's fixed
+// size happens to be. Row height then grows to whatever the tallest column
+// (text, images, dimensions, or descImages) actually needs.
+// ---------------------------------------------------------------------------
+const IMAGE_STACK_GAP_PX = 3; // gap between stacked images in any column
+const CELL_PAD_PX = 4; // breathing room from a cell's borders
+
+// Fallback cap used only when an image's original source-sheet size isn't
+// known (older catalogue data, or a re-import that hasn't run yet).
+const IMAGE_FALLBACK_MAX_HEIGHT_PX = 120; // roughly the old fixed-row-derived size for the IMAGE/DIMENSION columns
+const DESC_IMAGE_FALLBACK_MAX_HEIGHT_PX = 100; // smaller: descImages are supporting illustrations, not the main photo
+
+// When the original size IS known, it's used as-is (never upscaled) and only
+// shrunk if it wouldn't otherwise fit — these are generous safety nets
+// against a pathological outlier, not the normal constraint.
+const IMAGE_SAFETY_MAX_HEIGHT_PX = 400; // the IMAGE/DIMENSION columns' own product photo can legitimately be tall
+const DESC_IMAGE_SAFETY_MAX_HEIGHT_PX = 260; // descImages seen in the real catalogue are well under 230px
+
+/** Fits an image at its own natural size, only shrinking (never enlarging)
+ *  to stay within the given bounds — reproduces "how big it was originally
+ *  drawn" rather than stretching to fill the available space. */
+function fitOriginalSize(naturalW: number, naturalH: number, maxW: number, maxH: number): { width: number; height: number } {
+  const scale = Math.min(1, maxW / naturalW, maxH / naturalH);
+  return { width: Math.max(1, Math.round(naturalW * scale)), height: Math.max(1, Math.round(naturalH * scale)) };
+}
+
+/** Scaled (aspect-preserved) heights for a stack of images, plus which URLs
+ *  actually resolved — shared between the row-height calculation and the
+ *  actual placement so the two never drift apart.
+ *
+ *  When originalSizes[i] is known (the pixel size that image was drawn at
+ *  in the source spreadsheet), it's reproduced as-is, only shrunk if it
+ *  wouldn't otherwise fit — never stretched up to fill the cell. Falls back
+ *  to fitting the fetched image's raw resolution under fallbackMaxHeightPx
+ *  for the (older-data) case where the original size wasn't captured. */
+function measureStackedImages(
+  urls: string[],
+  fetchedCache: Map<string, FetchedImage | null>,
+  colWidthChars: number,
+  originalSizes: ({ width: number; height: number } | null)[] | undefined,
+  fallbackMaxHeightPx: number,
+  safetyMaxHeightPx: number
+): { available: { url: string; img: FetchedImage }[]; sizes: { width: number; height: number }[]; totalHeightPx: number } {
+  const available = urls
+    .map((url, i) => ({ url, img: fetchedCache.get(url), originalSize: originalSizes?.[i] ?? null }))
+    .filter((x): x is { url: string; img: FetchedImage; originalSize: { width: number; height: number } | null } => !!x.img);
+
+  const cellWidthPx = colWidthToPixels(colWidthChars);
+  const maxWidthPx = cellWidthPx - CELL_PAD_PX * 2;
+
+  const sizes = available.map(({ img, originalSize }) =>
+    originalSize
+      ? fitOriginalSize(originalSize.width, originalSize.height, maxWidthPx, safetyMaxHeightPx)
+      : fitWithin(img.width, img.height, maxWidthPx, fallbackMaxHeightPx)
+  );
+  const totalHeightPx =
+    sizes.reduce((s, sz) => s + sz.height, 0) +
+    Math.max(0, sizes.length - 1) * IMAGE_STACK_GAP_PX +
+    (sizes.length > 0 ? CELL_PAD_PX * 2 : 0);
+
+  return { available, sizes, totalHeightPx };
 }
 
 // ---------------------------------------------------------------------------
@@ -301,26 +367,6 @@ const LINE_HEIGHT_FACTOR = 1.2; // standard single-spacing approximation
 const DESC_TEXT_TOP_PAD_PT = 4;
 const DESC_TEXT_BOTTOM_PAD_PT = 4;
 const DESC_IMAGE_GAP_PT = 6; // gap between the text block and the first image
-const DESC_IMAGE_STACK_GAP_PX = 3; // gap between stacked images
-// Fallback cap used only when an image's original source-sheet size isn't
-// known (older catalogue data, or a re-import that hasn't run yet) — keeps
-// it roughly the scale of the IMAGE column's own photo rather than
-// stretched to fill the full column width.
-const DESC_IMAGE_MAX_HEIGHT_PX = 100;
-// When the original size IS known, it's used as-is (never upscaled) and
-// only shrunk if it wouldn't otherwise fit — this cap is a generous safety
-// net against a pathological outlier, not the normal constraint: every
-// descImage seen in the real catalogue is well under 230px either way,
-// since these are small illustrations, not full product photos.
-const DESC_IMAGE_SAFETY_MAX_HEIGHT_PX = 260;
-
-/** Fits an image at its own natural size, only shrinking (never enlarging)
- *  to stay within the given bounds — reproduces "how big it was originally
- *  drawn" rather than stretching to fill the available space. */
-function fitOriginalSize(naturalW: number, naturalH: number, maxW: number, maxH: number): { width: number; height: number } {
-  const scale = Math.min(1, maxW / naturalW, maxH / naturalH);
-  return { width: Math.max(1, Math.round(naturalW * scale)), height: Math.max(1, Math.round(naturalH * scale)) };
-}
 
 function estimateTextHeightPt(text: string, colWidthChars: number, fontSizePt = DESC_FONT_SIZE_PT): number {
   if (!text) return 0;
@@ -331,40 +377,6 @@ function estimateTextHeightPt(text: string, colWidthChars: number, fontSizePt = 
   let totalWrappedLines = 0;
   for (const line of lines) totalWrappedLines += Math.max(1, Math.ceil(line.length / charsPerLine));
   return totalWrappedLines * fontSizePt * LINE_HEIGHT_FACTOR;
-}
-
-/** Scaled (aspect-preserved) heights for a stack of images, plus which URLs
- *  actually resolved — shared between the row-height calculation and the
- *  actual placement so the two never drift apart.
- *
- *  When originalSizes[i] is known (the pixel size that image was drawn at
- *  in the source spreadsheet), it's reproduced as-is, only shrunk if it
- *  wouldn't otherwise fit — never stretched up to fill the column. Falls
- *  back to fitting the fetched image's raw resolution under a fixed cap
- *  for the (older-data) case where the original size wasn't captured. */
-function measureStackedImages(
-  urls: string[],
-  fetchedCache: Map<string, FetchedImage | null>,
-  colWidthChars: number,
-  originalSizes?: ({ width: number; height: number } | null)[]
-): { available: { url: string; img: FetchedImage }[]; sizes: { width: number; height: number }[]; totalHeightPx: number } {
-  const available = urls
-    .map((url, i) => ({ url, img: fetchedCache.get(url), originalSize: originalSizes?.[i] ?? null }))
-    .filter((x): x is { url: string; img: FetchedImage; originalSize: { width: number; height: number } | null } => !!x.img);
-
-  const cellWidthPx = colWidthToPixels(colWidthChars);
-  const padPx = 4;
-  const maxWidthPx = cellWidthPx - padPx * 2;
-
-  const sizes = available.map(({ img, originalSize }) =>
-    originalSize
-      ? fitOriginalSize(originalSize.width, originalSize.height, maxWidthPx, DESC_IMAGE_SAFETY_MAX_HEIGHT_PX)
-      : fitWithin(img.width, img.height, maxWidthPx, DESC_IMAGE_MAX_HEIGHT_PX)
-  );
-  const totalHeightPx =
-    sizes.reduce((s, sz) => s + sz.height, 0) + Math.max(0, sizes.length - 1) * DESC_IMAGE_STACK_GAP_PX + (sizes.length > 0 ? padPx * 2 : 0);
-
-  return { available, sizes, totalHeightPx };
 }
 
 /** Places a pre-measured stack of images centred horizontally in a column,
@@ -384,18 +396,13 @@ function placeStackedImagesBelow(
 
   const cellWidthPx = colWidthToPixels(colWidthChars);
   const cellWidthEmu = cellWidthPx * EMU_PER_PIXEL;
-  const padEmu = 4 * EMU_PER_PIXEL;
-  const gapEmu = DESC_IMAGE_STACK_GAP_PX * EMU_PER_PIXEL;
+  const padEmu = CELL_PAD_PX * EMU_PER_PIXEL;
+  const gapEmu = IMAGE_STACK_GAP_PX * EMU_PER_PIXEL;
 
   let cursorEmu = topOffsetPt * EMU_PER_POINT + padEmu;
 
   available.forEach(({ url, img }, i) => {
-    let imageId = imageIdCache.get(url);
-    if (imageId === undefined) {
-      imageId = workbook.addImage({ buffer: img.buffer, extension: img.extension } as unknown as ExcelJS.Image);
-      imageIdCache.set(url, imageId);
-    }
-
+    const imageId = getOrAddImage(workbook, imageIdCache, url, img);
     const { width, height } = sizes[i];
     const widthEmu = width * EMU_PER_PIXEL;
     const heightEmu = height * EMU_PER_PIXEL;
@@ -521,26 +528,54 @@ export async function buildQuotationWorkbook(session: SessionInfo, items: QuoteI
             ? `${baseDesc}\nList Price: ${money(listPrice)}`
             : baseDesc;
 
+        const resolvedImages = (it.images || []).map((u) => resolveImageUrl(u, publicBase));
+        const resolvedDims = (it.dimensions || []).map((u) => resolveImageUrl(u, publicBase));
         const resolvedDescImages = (it.descImages || []).map((u) => resolveImageUrl(u, publicBase));
+
+        const imageStack = measureStackedImages(
+          resolvedImages,
+          imageCache,
+          COL_WIDTHS[COL.IMAGE - 1],
+          it.imageSizes,
+          IMAGE_FALLBACK_MAX_HEIGHT_PX,
+          IMAGE_SAFETY_MAX_HEIGHT_PX
+        );
+        const dimStack = measureStackedImages(
+          resolvedDims,
+          imageCache,
+          COL_WIDTHS[COL.DIMENSION - 1],
+          it.dimensionSizes,
+          IMAGE_FALLBACK_MAX_HEIGHT_PX,
+          IMAGE_SAFETY_MAX_HEIGHT_PX
+        );
         const descImageStack = measureStackedImages(
           resolvedDescImages,
           imageCache,
           COL_WIDTHS[COL.DESC - 1],
-          it.descImageSizes
+          it.descImageSizes,
+          DESC_IMAGE_FALLBACK_MAX_HEIGHT_PX,
+          DESC_IMAGE_SAFETY_MAX_HEIGHT_PX
         );
         const hasDescImages = descImageStack.available.length > 0;
 
+        // Row height is whichever column actually needs the most room: the
+        // fixed default, the IMAGE column's own stack, the DIMENSION
+        // column's stack, or the description text + its stacked images.
+        const pxToPt = EMU_PER_PIXEL / EMU_PER_POINT;
         let textTopOffsetPt = DESC_TEXT_TOP_PAD_PT;
+        let descNeededHeightPt = 0;
         if (hasDescImages) {
           const textHeightPt = estimateTextHeightPt(desc, COL_WIDTHS[COL.DESC - 1]);
-          const imagesHeightPt = descImageStack.totalHeightPx * (EMU_PER_PIXEL / EMU_PER_POINT);
-          const neededHeightPt =
-            DESC_TEXT_TOP_PAD_PT + textHeightPt + DESC_IMAGE_GAP_PT + imagesHeightPt + DESC_TEXT_BOTTOM_PAD_PT;
-          row.height = Math.max(ITEM_ROW_HEIGHT, neededHeightPt);
+          descNeededHeightPt =
+            DESC_TEXT_TOP_PAD_PT + textHeightPt + DESC_IMAGE_GAP_PT + descImageStack.totalHeightPx * pxToPt + DESC_TEXT_BOTTOM_PAD_PT;
           textTopOffsetPt = DESC_TEXT_TOP_PAD_PT + textHeightPt + DESC_IMAGE_GAP_PT;
-        } else {
-          row.height = ITEM_ROW_HEIGHT;
         }
+        row.height = Math.max(
+          ITEM_ROW_HEIGHT,
+          descNeededHeightPt,
+          imageStack.totalHeightPx * pxToPt,
+          dimStack.totalHeightPx * pxToPt
+        );
 
         row.getCell(COL.NO).value = ri + 1;
         row.getCell(COL.ITEM_CODE).value = normalizeSku(it.sku);
@@ -580,11 +615,9 @@ export async function buildQuotationWorkbook(session: SessionInfo, items: QuoteI
 
         applyThinBorders(row, 1, 8);
 
-        const resolvedImages = (it.images || []).map((u) => resolveImageUrl(u, publicBase));
-        const resolvedDims = (it.dimensions || []).map((u) => resolveImageUrl(u, publicBase));
         const itemRowHeight = row.height || ITEM_ROW_HEIGHT;
-        placeImagesInCell(workbook, worksheet, imageIdCache, resolvedImages, imageCache, COL.IMAGE - 1, rowNumber - 1, COL_WIDTHS[COL.IMAGE - 1], itemRowHeight);
-        placeImagesInCell(workbook, worksheet, imageIdCache, resolvedDims, imageCache, COL.DIMENSION - 1, rowNumber - 1, COL_WIDTHS[COL.DIMENSION - 1], itemRowHeight);
+        placeStackedImagesCentered(workbook, worksheet, imageIdCache, imageStack.available, imageStack.sizes, COL.IMAGE - 1, rowNumber - 1, COL_WIDTHS[COL.IMAGE - 1], itemRowHeight);
+        placeStackedImagesCentered(workbook, worksheet, imageIdCache, dimStack.available, dimStack.sizes, COL.DIMENSION - 1, rowNumber - 1, COL_WIDTHS[COL.DIMENSION - 1], itemRowHeight);
         if (hasDescImages) {
           placeStackedImagesBelow(
             workbook,
