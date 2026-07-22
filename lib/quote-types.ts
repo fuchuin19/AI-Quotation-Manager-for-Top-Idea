@@ -78,6 +78,9 @@ export interface QuoteItem {
 export interface PendingItem {
   sku: string;
   desc: string;
+  /** The currently ACTIVE unit price — whichever of tagPrice/catalogPrice is
+   *  selected. This is what the rest of the confirm-sheet math (discount,
+   *  net price, total) runs on, same as before this field had two candidates. */
   price: number | null;
   priceMissing: boolean;
   qty: number;
@@ -89,8 +92,20 @@ export interface PendingItem {
   enteredPrice: string;
   /** True when this draft was built from "Use details from the tag" rather
    *  than a catalogue match — sku/desc become editable and the resulting
-   *  item is flagged and logged to the missing-SKU list on commit. */
+   *  item is flagged and logged to the missing-SKU list on commit. Distinct
+   *  from priceSource below: this means the SKU itself isn't in the
+   *  catalogue, not just that the tag's price was picked over a catalogue one. */
   fromTag?: boolean;
+  /** Price read off the showroom tag by Gemini, only set when the SKU WAS
+   *  matched in the catalogue and a valid tag price was also read — i.e.
+   *  exactly when there are two candidate prices to choose between. */
+  tagPrice?: number | null;
+  /** The catalogue's own price, kept alongside tagPrice so the confirm sheet
+   *  can offer switching back after the tag price was picked by default. */
+  catalogPrice?: number | null;
+  /** Which of tagPrice/catalogPrice is currently backing `price`. Only
+   *  meaningful when both tagPrice and catalogPrice are non-null. */
+  priceSource?: "tag" | "catalog";
 }
 
 export interface NotFoundState {
@@ -135,6 +150,7 @@ export interface ScanFoundResponse {
   found: true;
   product: Product;
   rawSku: string;
+  guessPrice: string;
 }
 export interface ScanNotFoundResponse {
   found: false;
@@ -155,6 +171,28 @@ export const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 // quotation deals in.
 export function roundRM(n: number): number {
   return Math.round(n);
+}
+
+// Tags print prices as "RM850", "RM2,100", "RM 2,100", "RM2,100.00", or bare
+// "2100". Strip the currency prefix and thousands separators, then round the
+// same way every other price in the app is rounded. Anything that doesn't
+// come out as a positive number (blank, garbled OCR, "N/A") is treated as no
+// price read at all — callers should fall back to the catalogue price.
+export function parseTagPrice(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const stripped = String(raw).replace(/RM/gi, "").replace(/,/g, "").trim();
+  if (!stripped) return null;
+  const n = Number(stripped);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return roundRM(n);
+}
+
+// The OCR safety net: tag and catalogue prices differing by more than 20% is
+// worth a quiet flag (glare/angle misread the digits, or the tag really is
+// for a different promo) without blocking him from proceeding either way.
+export function pricesDiffer(tagPrice: number, catalogPrice: number): boolean {
+  if (catalogPrice <= 0) return false;
+  return Math.abs(tagPrice - catalogPrice) / catalogPrice > 0.2;
 }
 
 export function money(n: number | null | undefined): string {

@@ -1,8 +1,38 @@
 "use client";
 
-import { AlertTriangle, Check, Tag } from "lucide-react";
+import { AlertTriangle, Check, Circle, CircleDot, Tag } from "lucide-react";
 import { Sheet, Stepper, Field, ProductThumb, Row, SecondaryButton, PrimaryButton } from "./ui";
-import { impliedDiscount, money, roundRM, type PendingItem } from "@/lib/quote-types";
+import { impliedDiscount, money, pricesDiffer, roundRM, type PendingItem } from "@/lib/quote-types";
+
+// A single tappable "Tag RM2,100" / "Catalogue RM2,280" option in the unit
+// price picker — filled dot when selected, tap anywhere on the row to pick it.
+function PriceOption({
+  label,
+  price,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  price: number;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`tap flex h-touch w-full items-center justify-between rounded border px-3 text-body-lg transition-colors ${
+        selected ? "border-[1.5px] border-primary bg-primary/5" : "border-outline-variant bg-surface-container-lowest"
+      }`}
+    >
+      <span className={`flex items-center gap-2 ${selected ? "font-semibold text-primary" : "text-on-surface-variant"}`}>
+        {selected ? <CircleDot className="h-4 w-4 shrink-0" /> : <Circle className="h-4 w-4 shrink-0" />}
+        {label}
+      </span>
+      <span className={`tnum ${selected ? "font-semibold text-primary" : "text-on-surface-variant"}`}>{money(price)}</span>
+    </button>
+  );
+}
 
 export function ConfirmSheet({
   pending,
@@ -87,6 +117,33 @@ export function ConfirmSheet({
           )}
         </div>
       </div>
+
+      {pending.tagPrice != null && pending.catalogPrice != null && (
+        <div className="flex flex-col gap-2 border-b border-outline-variant py-6">
+          <Field label="Unit Price">
+            <div className="flex flex-col gap-2">
+              <PriceOption
+                label="Tag"
+                price={pending.tagPrice}
+                selected={pending.priceSource === "tag"}
+                onSelect={() => onChange({ price: pending.tagPrice!, priceSource: "tag" })}
+              />
+              <PriceOption
+                label="Catalogue"
+                price={pending.catalogPrice}
+                selected={pending.priceSource === "catalog"}
+                onSelect={() => onChange({ price: pending.catalogPrice!, priceSource: "catalog" })}
+              />
+            </div>
+          </Field>
+          {pricesDiffer(pending.tagPrice, pending.catalogPrice) && (
+            <p className="flex items-start gap-2 text-body-md text-secondary">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              Tag and catalogue prices differ — check this is right.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-gutter border-b border-outline-variant py-6">
         <Field label="Quantity">

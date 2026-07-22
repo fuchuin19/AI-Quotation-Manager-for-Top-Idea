@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
 
     const product = findProduct(rawSku);
     if (product) {
-      return NextResponse.json({ found: true, product, rawSku });
+      return NextResponse.json({ found: true, product, rawSku, guessPrice });
     }
 
     return NextResponse.json({ found: false, rawSku, guessName, guessPrice });

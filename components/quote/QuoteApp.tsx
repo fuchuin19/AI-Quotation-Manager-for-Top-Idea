@@ -23,6 +23,7 @@ import {
   lineTotal,
   newQuotationMeta,
   normSku,
+  parseTagPrice,
   roundRM,
   sanitizeQuotations,
   toStoredItem,
@@ -355,17 +356,33 @@ export function QuoteApp() {
 
         if (data.found) {
           const p = data.product;
+          const catalogPrice = p.price !== null ? roundRM(p.price) : null;
+          // Showroom tags sometimes carry a promo price that differs from the
+          // catalogue — that's what the customer is looking at, so it wins by
+          // default. He can switch back to the catalogue price in the confirm
+          // sheet. If Gemini didn't read a usable price off the tag, or the
+          // catalogue has no price to compare it to, this falls back to
+          // exactly today's behavior.
+          const tagPrice = parseTagPrice(data.guessPrice);
+          const hasBothPrices = tagPrice !== null && catalogPrice !== null;
           setPending({
             sku: p.sku,
             desc: p.desc,
-            price: p.price !== null ? roundRM(p.price) : null,
-            priceMissing: p.priceMissing,
+            price: hasBothPrices ? tagPrice : catalogPrice,
+            priceMissing: catalogPrice === null && tagPrice === null,
             qty: Number(qty) || 1,
             discount: Number(disc) || 0,
             netPriceOverride: null,
             images: p.images,
             dimensions: p.dimensions,
-            enteredPrice: "",
+            // Catalogue has no price at all but a price WAS read off the tag:
+            // prefill the manual-entry box with it (same pattern as "use tag
+            // details" below) instead of leaving it blank — he still reviews
+            // and confirms it, just doesn't have to retype it.
+            enteredPrice: catalogPrice === null && tagPrice !== null ? String(tagPrice) : "",
+            tagPrice: hasBothPrices ? tagPrice : null,
+            catalogPrice: hasBothPrices ? catalogPrice : null,
+            priceSource: hasBothPrices ? "tag" : undefined,
           });
         } else {
           setNotFound({ sku: data.rawSku, guessName: data.guessName, guessPrice: data.guessPrice });
@@ -441,7 +458,14 @@ export function QuoteApp() {
       netPriceOverride: pending.netPriceOverride,
       images: pending.images,
       dimensions: pending.dimensions,
-      fromTag: pending.fromTag,
+      // Marks the item as tag-priced whenever the ACTIVE price came from the
+      // tag — either because the whole SKU isn't catalogued (pending.fromTag,
+      // unchanged meaning) or because it is catalogued but he picked the tag
+      // price over the catalogue one. Only the former ever logs to the
+      // missing-SKU list (see the block above, which still checks
+      // pending.fromTag alone) — a catalogue-matched item priced from a tag
+      // is not "missing from the catalogue" and must not appear there.
+      fromTag: pending.fromTag || pending.priceSource === "tag",
     });
   }, [pending, commit]);
 

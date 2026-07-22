@@ -66,6 +66,17 @@ function lineTotal(it: QuoteItem): number {
   return netUnitPrice(it) * (Number(it.qty) || 0);
 }
 
+// Some catalogue SKUs carry stray line breaks from the source spreadsheet
+// (a cell whose text wrapped across multiple lines in the original workbook,
+// e.g. "AS-6090-D1\n&\nWVK-2ER"). The ITEM CODE column has no wrapText, so a
+// literal line break still forces multi-line rendering (Excel always honours
+// manual line breaks regardless of the Wrap Text setting) — collapsing it
+// to a single line here is what actually fixes that, independent of
+// whatever the catalogue happens to contain.
+function normalizeSku(sku: string): string {
+  return sku.replace(/\s+/g, ' ').trim();
+}
+
 // Some catalogue descriptions already carry a hardcoded "List Price: RM..."
 // line from the source spreadsheet — strip it before (maybe) appending a
 // fresh one, so the exported cell never shows two.
@@ -368,7 +379,7 @@ export async function buildQuotationWorkbook(session: SessionInfo, items: QuoteI
             : baseDesc;
 
         row.getCell(COL.NO).value = ri + 1;
-        row.getCell(COL.ITEM_CODE).value = it.sku;
+        row.getCell(COL.ITEM_CODE).value = normalizeSku(it.sku);
         row.getCell(COL.DESC).value = desc;
         row.getCell(COL.QTY).value = Number(it.qty) || 0;
         // A blank line (price === null) leaves these cells genuinely empty —
