@@ -86,7 +86,8 @@ export function ItemRow({
               <input
                 type="text"
                 inputMode="decimal"
-                value={it.discount}
+                value={it.discount === 0 ? '' : it.discount}
+                placeholder="0"
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => handleDiscountChange(e.target.value)}
                 className="tnum h-11 w-full rounded border border-outline-variant bg-surface-container-lowest text-center text-body-lg font-medium text-primary outline-none focus:border-[1.5px] focus:border-primary"

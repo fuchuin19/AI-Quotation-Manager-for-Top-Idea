@@ -153,7 +153,8 @@ export function ConfirmSheet({
           <input
             type="text"
             inputMode="decimal"
-            value={pending.discount}
+            value={pending.discount === 0 ? '' : pending.discount}
+            placeholder="0"
             onFocus={(e) => e.target.select()}
             onChange={(e) => handleDiscountChange(e.target.value)}
             className="tnum h-touch w-full rounded border border-outline-variant bg-surface-container-lowest px-3 text-right text-body-lg text-primary outline-none focus:border-[1.5px] focus:border-primary"

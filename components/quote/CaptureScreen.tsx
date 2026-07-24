@@ -106,13 +106,14 @@ export function CaptureScreen({
             <input
               type="text"
               inputMode="decimal"
-              value={disc}
-              // type="text" (not "number") + select-on-focus is deliberate:
-              // .select() on <input type="number"> doesn't reliably highlight
-              // the existing text on iOS Safari, so tapping in often left the
-              // cursor mid-value — typing then inserted digits into the old
-              // number instead of replacing it (e.g. "35" typed into "100"
-              // became "10035", clamped straight back to 100).
+              // Shown blank (not a literal "0") when the value is zero, so
+              // there's nothing already in the box to type over — tapping in
+              // and typing "35" just produces "35". type="text" (not
+              // "number") + select-on-focus (for the non-zero case) is
+              // deliberate too: .select() on <input type="number"> doesn't
+              // reliably highlight the existing text on iOS Safari.
+              value={disc === 0 ? '' : disc}
+              placeholder="0"
               onFocus={(e) => e.target.select()}
               onChange={(e) => onDisc(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
               className="tnum h-touch w-full rounded border border-outline-variant bg-surface-container-lowest px-3 text-right text-body-lg text-primary outline-none focus:border-[1.5px] focus:border-primary"
