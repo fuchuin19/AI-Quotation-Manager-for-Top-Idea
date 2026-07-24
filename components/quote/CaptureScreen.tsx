@@ -109,6 +109,7 @@ export function CaptureScreen({
               value={disc}
               min={0}
               max={100}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => onDisc(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
               className="tnum h-touch w-full rounded border border-outline-variant bg-surface-container-lowest px-3 text-right text-body-lg text-primary outline-none focus:border-[1.5px] focus:border-primary"
             />

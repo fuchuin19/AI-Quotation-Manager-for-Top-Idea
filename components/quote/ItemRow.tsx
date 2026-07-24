@@ -78,6 +78,7 @@ export function ItemRow({
                 inputMode="numeric"
                 value={it.qty}
                 min={1}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => onChange({ qty: Math.max(1, Number(e.target.value) || 1) })}
                 className="tnum h-11 w-full rounded border border-outline-variant bg-surface-container-lowest text-center text-body-lg font-medium text-primary outline-none focus:border-[1.5px] focus:border-primary"
               />
@@ -89,6 +90,7 @@ export function ItemRow({
                 value={it.discount}
                 min={0}
                 max={100}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => handleDiscountChange(e.target.value)}
                 className="tnum h-11 w-full rounded border border-outline-variant bg-surface-container-lowest text-center text-body-lg font-medium text-primary outline-none focus:border-[1.5px] focus:border-primary"
               />
@@ -102,6 +104,7 @@ export function ItemRow({
                   type="number"
                   inputMode="decimal"
                   value={currentNet ?? 0}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => handleNetPriceChange(e.target.value)}
                   className="tnum h-11 w-full rounded border border-outline-variant bg-surface-container-lowest px-3 text-right text-body-lg font-medium text-primary outline-none focus:border-[1.5px] focus:border-primary"
                 />
