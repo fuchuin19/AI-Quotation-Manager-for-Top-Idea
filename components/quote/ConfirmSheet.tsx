@@ -151,11 +151,9 @@ export function ConfirmSheet({
         </Field>
         <Field label="Discount %">
           <input
-            type="number"
+            type="text"
             inputMode="decimal"
             value={pending.discount}
-            min={0}
-            max={100}
             onFocus={(e) => e.target.select()}
             onChange={(e) => handleDiscountChange(e.target.value)}
             className="tnum h-touch w-full rounded border border-outline-variant bg-surface-container-lowest px-3 text-right text-body-lg text-primary outline-none focus:border-[1.5px] focus:border-primary"
@@ -166,7 +164,7 @@ export function ConfirmSheet({
       <div className="border-b border-outline-variant py-6">
         <Field label="Net Unit Price (RM)">
           <input
-            type="number"
+            type="text"
             inputMode="decimal"
             value={effectiveNet}
             onFocus={(e) => e.target.select()}
@@ -193,7 +191,7 @@ export function ConfirmSheet({
           </div>
           <Field label="Unit Price (RM)">
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
               autoFocus={!pending.fromTag}
               value={pending.enteredPrice}

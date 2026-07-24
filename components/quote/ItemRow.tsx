@@ -74,10 +74,9 @@ export function ItemRow({
           <div className="mb-3 grid grid-cols-2 gap-3">
             <Field label="Quantity">
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
                 value={it.qty}
-                min={1}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => onChange({ qty: Math.max(1, Number(e.target.value) || 1) })}
                 className="tnum h-11 w-full rounded border border-outline-variant bg-surface-container-lowest text-center text-body-lg font-medium text-primary outline-none focus:border-[1.5px] focus:border-primary"
@@ -85,11 +84,9 @@ export function ItemRow({
             </Field>
             <Field label="Discount %">
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
                 value={it.discount}
-                min={0}
-                max={100}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => handleDiscountChange(e.target.value)}
                 className="tnum h-11 w-full rounded border border-outline-variant bg-surface-container-lowest text-center text-body-lg font-medium text-primary outline-none focus:border-[1.5px] focus:border-primary"
@@ -101,7 +98,7 @@ export function ItemRow({
             <div className="mb-3">
               <Field label="Net Unit Price (RM)">
                 <input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
                   value={currentNet ?? 0}
                   onFocus={(e) => e.target.select()}

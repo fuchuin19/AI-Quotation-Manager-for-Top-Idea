@@ -84,13 +84,12 @@ export function Stepper({
         &minus;
       </button>
       <input
-        type="number"
+        type="text"
         inputMode="numeric"
         value={value}
-        min={min}
         onFocus={(e) => e.target.select()}
         onChange={(e) => onChange(Math.max(min, Number(e.target.value) || min))}
-        className="tnum w-full min-w-0 flex-1 border-none bg-transparent p-0 text-center text-body-lg font-semibold text-primary outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="tnum w-full min-w-0 flex-1 border-none bg-transparent p-0 text-center text-body-lg font-semibold text-primary outline-none"
       />
       <button
         type="button"
